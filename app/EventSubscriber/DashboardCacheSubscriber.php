@@ -5,6 +5,7 @@ namespace App\EventSubscriber;
 
 use App\Event\LeaveApprovedEvent;
 use App\Event\LeaveRejectedEvent;
+use App\Event\LeaveCancelledEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
@@ -25,10 +26,11 @@ class DashboardCacheSubscriber implements EventSubscriberInterface
         return [
             LeaveApprovedEvent::class => 'onLeaveStatusChanged',
             LeaveRejectedEvent::class => 'onLeaveStatusChanged',
+            LeaveCancelledEvent::class => 'onLeaveStatusChanged',
         ];
     }
 
-    public function onLeaveStatusChanged(LeaveApprovedEvent|LeaveRejectedEvent $event): void
+    public function onLeaveStatusChanged(LeaveApprovedEvent|LeaveRejectedEvent|LeaveCancelledEvent $event): void
     {
         $this->cache->delete('dashboard.pending_leaves_count');
         $this->cache->delete('dashboard.on_leave_today_count');

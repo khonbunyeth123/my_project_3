@@ -1,0 +1,1684 @@
+==================================================
+FILE: 20251010092730_create_tbl_employees_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateTblEmployeesTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        // Let Phinx create the default 'id' column (auto-increment primary key)
+        $table = $this->table('tbl_employees');
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('photo', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('username', 'string', ['limit' => 50]) // username
+            ->addColumn('password', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('first_name', 'string', ['limit' => 50])
+            ->addColumn('last_name', 'string', ['limit' => 50])
+            ->addColumn('full_name', 'string', ['limit' => 100])
+            ->addColumn('gender', 'string', ['limit' => 10, 'null' => true])
+            ->addColumn('email', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('phone', 'string', ['limit' => 20, 'null' => true])
+            ->addColumn('address', 'text', ['null' => true])
+            ->addColumn('dob', 'date', ['null' => true])
+            ->addColumn('position', 'string', ['limit' => 50])
+            ->addColumn('department', 'string', ['limit' => 50])
+            ->addColumn('date_hired', 'date')
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->addIndex(['username'], ['unique' => true])
+            ->create();
+
+        // Insert default employee
+        $employeeUsername = trim((string) ($_ENV['HRMS_INITIAL_EMPLOYEE_USERNAME'] ?? getenv('HRMS_INITIAL_EMPLOYEE_USERNAME') ?? ''));
+        $employeePassword = (string) ($_ENV['HRMS_INITIAL_EMPLOYEE_PASSWORD'] ?? getenv('HRMS_INITIAL_EMPLOYEE_PASSWORD') ?? '');
+        $employeeEmail = trim((string) ($_ENV['HRMS_INITIAL_EMPLOYEE_EMAIL'] ?? getenv('HRMS_INITIAL_EMPLOYEE_EMAIL') ?? ''));
+        $employeeFullName = trim((string) ($_ENV['HRMS_INITIAL_EMPLOYEE_FULL_NAME'] ?? getenv('HRMS_INITIAL_EMPLOYEE_FULL_NAME') ?? ''));
+
+        if ($employeeUsername === '' || $employeePassword === '') {
+            throw new RuntimeException(
+                'HRMS initial employee credentials must be set in the environment before running this migration.'
+            );
+        }
+
+        $employeeData = [
+            [
+                'uuid' => Uuid::v4(),
+                'username' => $employeeUsername,
+                'password' => password_hash($employeePassword, PASSWORD_BCRYPT),
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'full_name' => $employeeFullName !== '' ? $employeeFullName : 'Admin User',
+                'email' => $employeeEmail !== '' ? $employeeEmail : null,
+                'position' => 'System Administrator',
+                'department' => 'IT',
+                'date_hired' => date('Y-m-d'),
+                'status_id' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => 1,
+            ]
+        ];
+
+        $this->table('tbl_employees')->insert($employeeData)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_employees')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010093034_create_tbl_leave_types_table.php
+==================================================
+<?php
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateTblLeaveTypesTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_leave_types');
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('name', 'string', ['limit' => 50])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->create();
+
+        // Insert default leave types
+        $this->table('tbl_leave_types')->insert([
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Sick Leave',
+                'description' => 'Leave for illness',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Casual Leave',
+                'description' => 'Personal reasons',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Annual Leave',
+                'description' => 'Yearly paid leave',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Other',
+                'description' => 'Other leave types',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+        ])->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_leave_types')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010100100_create_tbl_roles_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateTblRolesTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_roles', ['signed' => false]);
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('name', 'string', ['limit' => 50])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->addIndex(['name'], ['unique' => true])
+            ->create();
+
+        $roles = [
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Admin',
+                'description' => 'System administrator with full access',
+                'status_id' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => null,
+            ],
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Manager',
+                'description' => 'Manager with limited access',
+                'status_id' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => null,
+            ],
+            [
+                'uuid' => Uuid::v4(),
+                'name' => 'Employee',
+                'description' => 'Regular employee user',
+                'status_id' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => null,
+            ],
+        ];
+
+        $this->table('tbl_roles')->insert($roles)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_roles')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010100400_create_tbl_users_table.php
+==================================================
+<?php
+declare(strict_types=1);
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateTblUsersTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_users');
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('username', 'string', ['limit' => 50])
+            ->addColumn('password', 'string', ['limit' => 255])
+            ->addColumn('full_name', 'string', ['limit' => 100])
+            ->addColumn('email', 'string', ['limit' => 100])
+            ->addColumn('role_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('login_session', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->addIndex(['email'], ['unique' => true])
+            ->create();
+
+        $adminUsername = trim((string) ($_ENV['HRMS_INITIAL_ADMIN_USERNAME'] ?? getenv('HRMS_INITIAL_ADMIN_USERNAME') ?? ''));
+        $adminPassword = (string) ($_ENV['HRMS_INITIAL_ADMIN_PASSWORD'] ?? getenv('HRMS_INITIAL_ADMIN_PASSWORD') ?? '');
+        $adminEmail = trim((string) ($_ENV['HRMS_INITIAL_ADMIN_EMAIL'] ?? getenv('HRMS_INITIAL_ADMIN_EMAIL') ?? ''));
+        $adminFullName = trim((string) ($_ENV['HRMS_INITIAL_ADMIN_FULL_NAME'] ?? getenv('HRMS_INITIAL_ADMIN_FULL_NAME') ?? ''));
+
+        if ($adminUsername === '' || $adminPassword === '') {
+            throw new RuntimeException(
+                'HRMS initial admin credentials must be set in the environment before running this migration.'
+            );
+        }
+
+        $adminData = [
+            [
+                'uuid' => Uuid::v4(),
+                'username' => $adminUsername,
+                'password' => password_hash($adminPassword, PASSWORD_BCRYPT),
+                'full_name' => $adminFullName !== '' ? $adminFullName : 'Administrator',
+                'email' => $adminEmail !== '' ? $adminEmail : 'admin@example.com',
+                'role_id' => 1,
+                'status_id' => 1,
+                'login_session' => null,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => null,
+            ]
+        ];
+
+        $this->table('tbl_users')->insert($adminData)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_users')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010100510_create_leave_applications_table.php
+==================================================
+<?php
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreateLeaveApplicationsTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_leave_applications');
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('employee_id', 'integer')
+            ->addColumn('leave_type_id', 'integer')
+            ->addColumn('start_date', 'date')
+            ->addColumn('end_date', 'date')
+            ->addColumn('reason', 'text')
+            ->addColumn('status_id', 'integer', [
+                'limit' => 1,
+                'default' => 0,
+                'comment' => '0=pending, 1=approved, 2=rejected'
+            ])
+            ->addColumn('remark', 'text', ['null' => true, 'after' => 'status_id']) // <-- added
+            ->addColumn('approved_by', 'integer', ['null' => true])
+            ->addColumn('approved_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->addIndex(['employee_id'])
+            ->addIndex(['leave_type_id'])
+            ->addIndex(['status_id'])
+            ->create();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_leave_applications')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010102627_create_attendance_records_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreateAttendanceRecordsTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_attendance_records');
+        $table
+            ->addColumn('uuid', 'char', ['length' => 36])
+            ->addColumn('employee_id', 'integer')
+            ->addColumn('date', 'date')
+            ->addColumn('check_time', 'time') // time of check-in/check-out
+            ->addColumn('check_type_id', 'integer') // foreign key to tbl_check_types
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            // ->addForeignKey('employee_id', 'tbl_employees', 'id', ['delete'=> 'CASCADE', 'update'=> 'NO_ACTION'])
+            // ->addForeignKey('check_type_id', 'tbl_check_types', 'id', ['delete'=> 'NO_ACTION', 'update'=> 'NO_ACTION'])
+            ->addIndex(['uuid'], ['unique' => true])
+            ->addIndex(['employee_id', 'date', 'check_type_id'], ['unique' => true])
+            ->create();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_attendance_records')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251010110117_create_tbl_check_types_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreateTblCheckTypesTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_check_types');
+        $table
+            ->addColumn('name', 'string', ['limit' => 50])
+            ->addColumn('standard_time', 'time', ['null' => true]) // standard check-in/out time
+            ->addColumn('description', 'string', ['limit' => 100, 'null' => true]) // explanation
+            ->addColumn('status_id', 'integer', ['limit' => 1, 'default' => 1])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('created_by', 'integer', ['null' => true])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addColumn('updated_by', 'integer', ['null' => true])
+            ->addColumn('deleted_at', 'datetime', ['null' => true])
+            ->addColumn('deleted_by', 'integer', ['null' => true])
+            ->create();
+
+        // Insert default check types with standard times
+        $checkTypes = [
+            ['name' => 'Check-in 1', 'standard_time' => '08:00:00', 'description' => 'Start of shift', 'status_id' => 1, 'created_at' => date('Y-m-d H:i:s')],
+            ['name' => 'Check-out 1', 'standard_time' => '12:00:00', 'description' => 'Lunch break start', 'status_id' => 1, 'created_at' => date('Y-m-d H:i:s')],
+            ['name' => 'Check-in 2', 'standard_time' => '13:00:00', 'description' => 'Lunch break end', 'status_id' => 1, 'created_at' => date('Y-m-d H:i:s')],
+            ['name' => 'Check-out 2', 'standard_time' => '17:00:00', 'description' => 'End of shift', 'status_id' => 1, 'created_at' => date('Y-m-d H:i:s')],
+        ];
+
+        $this->table('tbl_check_types')->insert($checkTypes)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_check_types')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20251015000000_CreateTblPermissionsAndRolePermissions.php
+==================================================
+<?php
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateTblPermissionsAndRolePermissions extends AbstractMigration
+{
+    public function up(): void
+    {
+        // ─── 1. tbl_permissions ───────────────────────────────────────────
+        $table = $this->table('tbl_permissions', ['signed' => false]);
+        $table
+            ->addColumn('uuid',        'char',    ['length' => 36])
+            ->addColumn('module',      'string',  ['limit'  => 50])
+            ->addColumn('action',      'string',  ['limit'  => 50])
+            ->addColumn('description', 'text',    ['null'   => true])
+            ->addColumn('status_id',   'integer', ['limit'  => 1, 'default' => 1])
+            ->addColumn('created_at',  'datetime')
+            ->addColumn('created_by',  'integer', ['null' => true])
+            ->addColumn('updated_at',  'datetime', ['null' => true])
+            ->addColumn('updated_by',  'integer', ['null' => true])
+            ->addColumn('deleted_at',  'datetime', ['null' => true])
+            ->addColumn('deleted_by',  'integer', ['null' => true])
+            ->addIndex(['uuid'],             ['unique' => true])
+            ->addIndex(['module', 'action'], ['unique' => true])
+            ->create();
+
+        // ─── 2. tbl_role_permissions ──────────────────────────────────────
+        $pivot = $this->table('tbl_role_permissions', ['signed' => false]);
+        $pivot
+            ->addColumn('role_id',       'integer', ['signed' => false])
+            ->addColumn('permission_id', 'integer', ['signed' => false])
+            ->addIndex(['role_id', 'permission_id'], ['unique' => true])
+            ->create();
+
+        // ─── 3. Seed permissions ──────────────────────────────────────────
+        // module = sidebar section,  action = what they can do
+        $now = date('Y-m-d H:i:s');
+
+        $permissions = [
+            // Dashboard
+            ['module' => 'dashboard',   'action' => 'view',   'description' => 'View dashboard'],
+
+            // Attendance
+            ['module' => 'attendance',  'action' => 'view',   'description' => 'View attendance'],
+
+            // Employees
+            ['module' => 'employee',    'action' => 'view',   'description' => 'View employees'],
+
+            // Leave
+            ['module' => 'leave',       'action' => 'view',   'description' => 'View leave requests'],
+
+            // Reports (submenu)
+            ['module' => 'report',      'action' => 'view',          'description' => 'View reports menu'],
+            ['module' => 'report',      'action' => 'view_daily',    'description' => 'View daily report'],
+            ['module' => 'report',      'action' => 'view_summary',  'description' => 'View summary report'],
+            ['module' => 'report',      'action' => 'view_detail',   'description' => 'View detailed report'],
+            ['module' => 'report',      'action' => 'view_top',      'description' => 'View top employees report'],
+
+            // Security (submenu)
+            ['module' => 'user',        'action' => 'view',   'description' => 'View user management'],
+            ['module' => 'roles',       'action' => 'view',   'description' => 'View roles'],
+            ['module' => 'permissions', 'action' => 'view',   'description' => 'View permissions'],
+            ['module' => 'audits',      'action' => 'view',   'description' => 'View audit logs'],
+        ];
+
+        $rows = [];
+        foreach ($permissions as $p) {
+            $rows[] = [
+                'uuid'        => Uuid::v4(),
+                'module'      => $p['module'],
+                'action'      => $p['action'],
+                'description' => $p['description'],
+                'status_id'   => 1,
+                'created_at'  => $now,
+                'created_by'  => null,
+            ];
+        }
+
+        $this->table('tbl_permissions')->insert($rows)->saveData();
+
+        // ─── 4. Seed role_permissions ─────────────────────────────────────
+        // roles: 1=Admin, 2=Manager, 3=Employee  (seeded in roles migration)
+        // Admin  → all permissions
+        // Manager → dashboard, attendance, employee, leave, all reports
+        // Employee → dashboard, attendance, leave
+
+        // Fetch inserted permission IDs by module+action
+        $allPerms = $this->fetchAll('SELECT id, module, action FROM tbl_permissions');
+        $permMap  = [];
+        foreach ($allPerms as $row) {
+            $permMap[$row['module'] . '.' . $row['action']] = (int) $row['id'];
+        }
+
+        $rolePermissions = [];
+
+        // Admin (role_id = 1) — everything
+        foreach ($permMap as $pid) {
+            $rolePermissions[] = ['role_id' => 1, 'permission_id' => $pid];
+        }
+
+        // Manager (role_id = 2)
+        $managerPerms = [
+            'dashboard.view',
+            'attendance.view',
+            'employee.view',
+            'leave.view',
+            'report.view', 'report.view_daily', 'report.view_summary',
+            'report.view_detail', 'report.view_top',
+        ];
+        foreach ($managerPerms as $key) {
+            if (isset($permMap[$key])) {
+                $rolePermissions[] = ['role_id' => 2, 'permission_id' => $permMap[$key]];
+            }
+        }
+
+        // Employee (role_id = 3)
+        $employeePerms = ['dashboard.view', 'attendance.view', 'leave.view'];
+        foreach ($employeePerms as $key) {
+            if (isset($permMap[$key])) {
+                $rolePermissions[] = ['role_id' => 3, 'permission_id' => $permMap[$key]];
+            }
+        }
+
+        $this->table('tbl_role_permissions')->insert($rolePermissions)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_role_permissions')->drop()->save();
+        $this->table('tbl_permissions')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20260429103000_drop_employee_code_column_from_tbl_employees.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class DropEmployeeCodeColumnFromTblEmployees extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if ($table->hasIndex(['employee_id'])) {
+            $table->removeIndex(['employee_id'])->save();
+        }
+
+        if ($table->hasColumn('employee_id')) {
+            $table->removeColumn('employee_id')->save();
+        }
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if (!$table->hasColumn('employee_id')) {
+            $table->addColumn('employee_id', 'string', ['limit' => 20, 'null' => true])->save();
+        }
+
+        if (!$table->hasIndex(['employee_id'])) {
+            $table->addIndex(['employee_id'], ['unique' => true])->save();
+        }
+    }
+}
+
+
+
+==================================================
+FILE: 20260429110000_refactor_employee_auth_fields.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class RefactorEmployeeAuthFields extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if ($table->hasColumn('user_id')) {
+            $table->removeColumn('user_id')->save();
+        }
+
+        if (!$table->hasColumn('password')) {
+            $table->addColumn('password', 'string', ['limit' => 255, 'null' => true])->save();
+        }
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if ($table->hasColumn('password')) {
+            $table->removeColumn('password')->save();
+        }
+
+        if (!$table->hasColumn('user_id')) {
+            $table->addColumn('user_id', 'integer', ['null' => true])->save();
+        }
+    }
+}
+
+
+
+==================================================
+FILE: 20260429111000_create_access_tokens_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreateAccessTokensTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_access_tokens');
+        $table
+            ->addColumn('token', 'string', ['limit' => 255])
+            ->addColumn('tokenable_type', 'string', ['limit' => 20])
+            ->addColumn('tokenable_id', 'integer')
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('last_used_at', 'datetime', ['null' => true])
+            ->addColumn('revoked_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime')
+            ->addIndex(['token'], ['unique' => true])
+            ->addIndex(['tokenable_type', 'tokenable_id'])
+            ->create();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_access_tokens')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20260505120000_add_fcm_token_to_tbl_employees.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddFcmTokenToTblEmployees extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if (!$table->hasColumn('fcm_token')) {
+            $table
+                ->addColumn('fcm_token', 'string', [
+                    'limit'   => 255,
+                    'null'    => true,
+                    'default' => null,
+                    'after'   => 'password',
+                ])
+                ->save();
+        }
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_employees');
+
+        if ($table->hasColumn('fcm_token')) {
+            $table->removeColumn('fcm_token')->save();
+        }
+    }
+}
+
+
+
+==================================================
+FILE: 20260531110707_create_password_resets_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreatePasswordResetsTable extends AbstractMigration
+{
+    public function change(): void
+    {
+        $table = $this->table('password_resets', ['id' => false, 'primary_key' => ['email', 'token']]);
+        $table
+            ->addColumn('email', 'string', ['limit' => 100, 'null' => false])
+            ->addColumn('token', 'string', ['limit' => 255, 'null' => false])
+            ->addColumn('created_at', 'datetime', ['null' => false])
+            ->addIndex(['email'])
+            ->addIndex(['token'])
+            ->create();
+    }
+}
+
+
+
+==================================================
+FILE: 20260531120000_create_calendar_module_tables.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateCalendarModuleTables extends AbstractMigration
+{
+    public function up(): void
+    {
+        $now = date('Y-m-d H:i:s');
+
+        // -----------------------------------------------------------------
+        // Branch support for employee filtering
+        // -----------------------------------------------------------------
+        $employees = $this->table('tbl_employees');
+        if (!$employees->hasColumn('branch')) {
+            $employees
+                ->addColumn('branch', 'string', [
+                    'limit' => 100,
+                    'null' => true,
+                    'default' => null,
+                    'after' => 'department',
+                ])
+                ->save();
+        }
+
+        // -----------------------------------------------------------------
+        // Calendar events
+        // -----------------------------------------------------------------
+        if (!$this->hasTable('tbl_calendar_events')) {
+            $table = $this->table('tbl_calendar_events', ['signed' => false]);
+            $table
+                ->addColumn('uuid', 'char', ['length' => 36])
+                ->addColumn('title', 'string', ['limit' => 191])
+                ->addColumn('description', 'text', ['null' => true])
+                ->addColumn('event_type', 'string', ['limit' => 30])
+                ->addColumn('status', 'string', [
+                    'limit' => 20,
+                    'default' => 'pending',
+                    'comment' => 'pending, approved, rejected, cancelled',
+                ])
+                ->addColumn('start_at', 'datetime')
+                ->addColumn('end_at', 'datetime')
+                ->addColumn('all_day', 'boolean', ['default' => false])
+                ->addColumn('recurrence_rule', 'text', ['null' => true])
+                ->addColumn('recurrence_parent_id', 'integer', ['null' => true, 'signed' => false])
+                ->addColumn('created_at', 'datetime')
+                ->addColumn('created_by', 'integer', ['null' => true])
+                ->addColumn('updated_at', 'datetime', ['null' => true])
+                ->addColumn('updated_by', 'integer', ['null' => true])
+                ->addColumn('approved_at', 'datetime', ['null' => true])
+                ->addColumn('approved_by', 'integer', ['null' => true])
+                ->addColumn('rejected_at', 'datetime', ['null' => true])
+                ->addColumn('rejected_by', 'integer', ['null' => true])
+                ->addColumn('cancelled_at', 'datetime', ['null' => true])
+                ->addColumn('cancelled_by', 'integer', ['null' => true])
+                ->addColumn('deleted_at', 'datetime', ['null' => true])
+                ->addColumn('deleted_by', 'integer', ['null' => true])
+                ->addIndex(['uuid'], ['unique' => true])
+                ->addIndex(['event_type'])
+                ->addIndex(['status'])
+                ->addIndex(['start_at'])
+                ->addIndex(['end_at'])
+                ->create();
+        }
+
+        // -----------------------------------------------------------------
+        // Calendar event targets
+        // -----------------------------------------------------------------
+        if (!$this->hasTable('tbl_calendar_event_targets')) {
+            $table = $this->table('tbl_calendar_event_targets', ['signed' => false]);
+            $table
+                ->addColumn('event_id', 'integer', ['signed' => false])
+                ->addColumn('target_type', 'string', ['limit' => 20])
+                ->addColumn('target_value', 'string', ['limit' => 191])
+                ->addColumn('target_label', 'string', ['limit' => 191, 'null' => true])
+                ->addColumn('created_at', 'datetime')
+                ->addIndex(['event_id'])
+                ->addIndex(['target_type'])
+                ->create();
+        }
+
+        // -----------------------------------------------------------------
+        // Permissions
+        // -----------------------------------------------------------------
+        if ($this->hasTable('tbl_permissions')) {
+            $permissionRows = [
+                ['module' => 'calendar', 'action' => 'view', 'description' => 'View admin calendar'],
+                ['module' => 'calendar', 'action' => 'manage', 'description' => 'Manage calendar events'],
+            ];
+
+            foreach ($permissionRows as $permission) {
+                $module = addslashes($permission['module']);
+                $action = addslashes($permission['action']);
+                $existing = $this->fetchRow(
+                    "SELECT id FROM tbl_permissions WHERE module = '{$module}' AND action = '{$action}' AND deleted_at IS NULL LIMIT 1"
+                );
+
+                if ($existing) {
+                    continue;
+                }
+
+                $this->execute(
+                    'INSERT INTO tbl_permissions (uuid, module, action, description, status_id, created_at)
+                     VALUES (?, ?, ?, ?, 1, ?)',
+                    [
+                        Uuid::v4(),
+                        $permission['module'],
+                        $permission['action'],
+                        $permission['description'],
+                        $now,
+                    ]
+                );
+            }
+        }
+    }
+
+    public function down(): void
+    {
+        if ($this->hasTable('tbl_calendar_event_targets')) {
+            $this->table('tbl_calendar_event_targets')->drop()->save();
+        }
+
+        if ($this->hasTable('tbl_calendar_events')) {
+            $this->table('tbl_calendar_events')->drop()->save();
+        }
+
+        if ($this->hasTable('tbl_permissions')) {
+            $permissionIds = $this->fetchAll(
+                "SELECT id FROM tbl_permissions WHERE module = 'calendar' AND deleted_at IS NULL"
+            );
+
+            foreach ($permissionIds as $row) {
+                $this->execute('DELETE FROM tbl_role_permissions WHERE permission_id = ?', [(int) $row['id']]);
+            }
+
+            $this->execute("DELETE FROM tbl_permissions WHERE module = 'calendar'");
+        }
+
+        $employees = $this->table('tbl_employees');
+        if ($employees->hasColumn('branch')) {
+            $employees->removeColumn('branch')->save();
+        }
+    }
+
+}
+
+
+
+==================================================
+FILE: 20260601100000_leave_refactor_migration.php
+==================================================
+<?php
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+/**
+ * Migration to create tbl_leave_audit and add indexes to tbl_leave_applications.
+ */
+class LeaveRefactorMigration extends AbstractMigration
+{
+    public function change(): void
+    {
+        // Improvement 3: Create tbl_leave_audit
+        if (!$this->hasTable('tbl_leave_audit')) {
+            $table = $this->table('tbl_leave_audit', ['signed' => false]);
+            $table->addColumn('leave_id', 'integer', ['signed' => false])
+                  ->addColumn('action', 'enum', ['values' => ['approved', 'rejected', 'created', 'cancelled']])
+                  ->addColumn('performed_by_user_id', 'integer', ['signed' => false])
+                  ->addColumn('performed_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+                  ->addColumn('ip_address', 'string', ['limit' => 45, 'null' => true])
+                  ->create();
+        }
+
+        // Improvement 5: SQL indexes
+        $leaveApplications = $this->table('tbl_leave_applications');
+        
+        // Composite index for attendance UNION ALL (or replacement query)
+        $leaveApplications->addIndex(['status_id', 'start_date', 'end_date', 'employee_id'], ['name' => 'idx_leave_attendance'])
+                          // Index for dashboard today-on-leave
+                          ->addIndex(['status_id', 'start_date'], ['name' => 'idx_leave_dashboard'])
+                          // Index for employee history
+                          ->addIndex(['employee_id', 'created_at'], ['name' => 'idx_leave_history'])
+                          ->update();
+    }
+}
+
+
+
+==================================================
+FILE: 20260602120000_add_rejection_fields_to_leave_applications.php
+==================================================
+<?php
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddRejectionFieldsToLeaveApplications extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_leave_applications');
+        $table
+            ->addColumn('rejected_by', 'integer', ['null' => true, 'after' => 'approved_at'])
+            ->addColumn('rejected_at', 'datetime', ['null' => true, 'after' => 'rejected_by'])
+            ->update();
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_leave_applications');
+        $table
+            ->removeColumn('rejected_at')
+            ->removeColumn('rejected_by')
+            ->update();
+    }
+}
+
+
+
+==================================================
+FILE: 20260606103000_add_phase1_database_integrity_constraints.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddPhase1DatabaseIntegrityConstraints extends AbstractMigration
+{
+    public function up(): void
+    {
+        $this->ensureLeaveAuditTable();
+        $this->ensureLeaveCheckType();
+    }
+
+    public function down(): void
+    {
+        $this->execute("DELETE FROM tbl_check_types WHERE LOWER(TRIM(name)) = 'leave'");
+    }
+
+    private function ensureLeaveAuditTable(): void
+    {
+        if (!$this->hasTable('tbl_leave_audit')) {
+            $table = $this->table('tbl_leave_audit', ['signed' => false]);
+            $table
+                ->addColumn('leave_id', 'integer', ['signed' => false])
+                ->addColumn('action', 'enum', ['values' => ['approved', 'rejected', 'created', 'cancelled']])
+                ->addColumn('performed_by_user_id', 'integer', ['signed' => false])
+                ->addColumn('performed_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+                ->addColumn('ip_address', 'string', ['limit' => 45, 'null' => true])
+                ->addIndex(['leave_id'])
+                ->addIndex(['performed_by_user_id'])
+                ->create();
+
+            return;
+        }
+
+        $table = $this->table('tbl_leave_audit');
+
+        if ($table->hasColumn('performed_by_user_id')) {
+            $table->changeColumn('performed_by_user_id', 'integer', ['signed' => false])->update();
+        } else {
+            $table->addColumn('performed_by_user_id', 'integer', ['signed' => false, 'after' => 'leave_id'])->update();
+        }
+
+        if (!$table->hasIndex(['performed_by_user_id'])) {
+            $table->addIndex(['performed_by_user_id'])->update();
+        }
+    }
+
+    private function ensureLeaveCheckType(): void
+    {
+        $checkType = $this->fetchRow(
+            "SELECT id, deleted_at FROM tbl_check_types WHERE LOWER(TRIM(name)) = 'leave' LIMIT 1"
+        );
+
+        if ($checkType) {
+            $this->execute(
+                "UPDATE tbl_check_types
+                 SET deleted_at = NULL,
+                     deleted_by = NULL,
+                     status_id = 1
+                 WHERE LOWER(TRIM(name)) = 'leave'"
+            );
+            return;
+        }
+
+        $this->execute(
+            "INSERT INTO tbl_check_types (name, standard_time, description, status_id, created_at)
+             VALUES ('Leave', NULL, 'Approved leave attendance marker', 1, NOW())"
+        );
+    }
+}
+
+
+
+==================================================
+FILE: 20260608130000_seed_cambodia_public_holidays_2026.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use App\Support\Uuid;
+use Phinx\Migration\AbstractMigration;
+
+final class SeedCambodiaPublicHolidays2026 extends AbstractMigration
+{
+    public function up(): void
+    {
+        if (!$this->hasTable('tbl_calendar_events')) {
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        $events = [
+            ['2026-01-01', '2026-01-01', 'Internaand tional New Year Day'],
+            ['2026-01-07', '2026-01-07', 'Day of Victory over the Genocidal Regime'],
+            ['2026-03-08', '2026-03-08', 'International Women\'s Rights Day'],
+            ['2026-04-14', '2026-04-16', 'Khmer New Year\'s Day'],
+            ['2026-05-01', '2026-05-01', 'International Labor Day'],
+            ['2026-05-05', '2026-05-05', 'Royal Ploughing Ceremony'],
+            ['2026-05-14', '2026-05-14', 'Birthday of His Majesty King Norodom Sihamoni'],
+            ['2026-06-18', '2026-06-18', 'Birthday of Her Majesty the Queen-Mother Norodom Monineath Sihanouk'],
+            ['2026-09-24', '2026-09-24', 'Constitution Day'],
+            ['2026-10-10', '2026-10-12', 'Pchum Ben Day'],
+            ['2026-10-15', '2026-10-15', 'Mourning Day of the Late King-Father Norodom Sihanouk'],
+            ['2026-10-29', '2026-10-29', 'Coronation Day of King Norodom Sihamoni'],
+            ['2026-11-09', '2026-11-09', 'National Independence Day'],
+            ['2026-11-23', '2026-11-25', 'Water Festival'],
+            ['2026-12-29', '2026-12-29', 'Peace Day in Cambodia'],
+        ];
+
+        foreach ($events as [$startDate, $endDate, $title]) {
+            $safeTitle = addslashes($title);
+            $safeStartAt = $startDate . ' 00:00:00';
+            $safeEndAt = $endDate . ' 23:59:59';
+            $existing = $this->fetchRow(
+                "SELECT id FROM tbl_calendar_events
+                 WHERE title = '{$safeTitle}'
+                   AND start_at = '{$safeStartAt}'
+                   AND end_at = '{$safeEndAt}'
+                   AND deleted_at IS NULL
+                 LIMIT 1"
+            );
+
+            if ($existing) {
+                continue;
+            }
+
+            $this->execute(
+                'INSERT INTO tbl_calendar_events
+                    (uuid, title, description, event_type, status, start_at, end_at, all_day, created_at)
+                 VALUES
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    Uuid::v4(),
+                    $title,
+                    'Cambodia public holiday for 2026',
+                    'holiday',
+                    'approved',
+                    $startDate . ' 00:00:00',
+                    $endDate . ' 23:59:59',
+                    1,
+                    $now,
+                ]
+            );
+        }
+    }
+
+    public function down(): void
+    {
+        if (!$this->hasTable('tbl_calendar_events')) {
+            return;
+        }
+
+        $titles = [
+            'International New Year Day',
+            'Day of Victory over the Genocidal Regime',
+            'International Women\'s Rights Day',
+            'Khmer New Year\'s Day',
+            'International Labor Day',
+            'Royal Ploughing Ceremony',
+            'Birthday of His Majesty King Norodom Sihamoni',
+            'Birthday of Her Majesty the Queen-Mother Norodom Monineath Sihanouk',
+            'Constitution Day',
+            'Pchum Ben Day',
+            'Mourning Day of the Late King-Father Norodom Sihanouk',
+            'Coronation Day of King Norodom Sihamoni',
+            'National Independence Day',
+            'Water Festival',
+            'Peace Day in Cambodia',
+        ];
+
+        $placeholders = implode(', ', array_fill(0, count($titles), '?'));
+        $this->execute(
+            "DELETE FROM tbl_calendar_events
+             WHERE event_type = 'holiday'
+               AND title IN ({$placeholders})
+               AND description = 'Cambodia public holiday for 2026'",
+            $titles
+        );
+    }
+}
+
+
+
+==================================================
+FILE: 20260608133000_add_real_scan_datetime_and_status_to_attendance.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddRealScanDatetimeAndStatusToAttendance extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_attendance_records');
+
+        if (!$table->hasColumn('scan_datetime')) {
+            $table->addColumn('scan_datetime', 'datetime', ['null' => true, 'after' => 'date'])->update();
+        }
+
+        if (!$table->hasColumn('status')) {
+            $table->addColumn('status', 'string', ['limit' => 30, 'null' => true, 'after' => 'check_type_id'])->update();
+        }
+
+        $this->execute("
+            UPDATE tbl_attendance_records
+            SET scan_datetime = CONCAT(date, ' ', check_time)
+            WHERE scan_datetime IS NULL
+        ");
+
+        $this->execute("
+            UPDATE tbl_attendance_records a
+            JOIN tbl_check_types ct ON ct.id = a.check_type_id
+            SET a.status = CASE
+                WHEN ct.name IN ('Check-in 1', 'Check-in 2') AND TIME(a.scan_datetime) > ct.standard_time THEN 'Late'
+                WHEN ct.name = 'Check-out 1' AND TIME(a.scan_datetime) < ct.standard_time THEN 'Early Leave'
+                WHEN ct.name = 'Check-out 2' AND TIME(a.scan_datetime) < ct.standard_time THEN 'Early Leave'
+                WHEN ct.name = 'Check-out 2' AND TIME(a.scan_datetime) > ct.standard_time THEN 'Overtime'
+                ELSE 'On Time'
+            END
+            WHERE a.scan_datetime IS NOT NULL
+              AND a.deleted_at IS NULL
+              AND a.check_type_id IS NOT NULL
+        ");
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_attendance_records');
+
+        if ($table->hasColumn('status')) {
+            $table->removeColumn('status')->update();
+        }
+
+        if ($table->hasColumn('scan_datetime')) {
+            $table->removeColumn('scan_datetime')->update();
+        }
+    }
+}
+
+
+
+==================================================
+FILE: 20260610165751_add_slug_to_tbl_roles.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddSlugToTblRoles extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_roles');
+        if (!$table->hasColumn('slug')) {
+            $table->addColumn('slug', 'string', ['limit' => 50, 'after' => 'name', 'null' => true])
+                  ->addIndex(['slug'], ['unique' => true])
+                  ->update();
+            
+            // Populate existing slugs from names
+            $rows = $this->fetchAll('SELECT id, name FROM tbl_roles');
+            $pdo = $this->getAdapter()->getConnection();
+            foreach ($rows as $row) {
+                $slug = strtolower(trim($row['name']));
+                $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+                $slug = preg_replace('/^-|-$/', '', $slug);
+                $this->execute("UPDATE tbl_roles SET slug = " . $pdo->quote($slug) . " WHERE id = " . $row['id']);
+            }
+
+            // Make slug NOT NULL after populating
+            $table->changeColumn('slug', 'string', ['limit' => 50, 'null' => false])
+                  ->update();
+        }
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_roles');
+        if ($table->hasColumn('slug')) {
+            $table->removeColumn('slug')->update();
+        }
+    }
+}
+
+
+
+==================================================
+FILE: 20260611000000_seed_employees_batch.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class SeedEmployeesBatch extends AbstractMigration
+{
+    public function up(): void
+    {
+        $password = password_hash('123456', PASSWORD_BCRYPT);
+        $createdAt = date('Y-m-d H:i:s');
+
+        $employees = [
+            ['john.doe', 'John', 'Doe', 'John Doe', 'john.doe@example.com', 'Developer', 'IT', '2026-01-01'],
+            ['jane.smith', 'Jane', 'Smith', 'Jane Smith', 'jane.smith@example.com', 'Designer', 'Design', '2026-01-02'],
+            ['robert.brown', 'Robert', 'Brown', 'Robert Brown', 'robert.brown@example.com', 'Manager', 'Sales', '2026-01-03'],
+            ['emily.davis', 'Emily', 'Davis', 'Emily Davis', 'emily.davis@example.com', 'Analyst', 'Finance', '2026-01-04'],
+            ['michael.wilson', 'Michael', 'Wilson', 'Michael Wilson', 'michael.wilson@example.com', 'Support', 'IT', '2026-01-05'],
+            ['sarah.miller', 'Sarah', 'Miller', 'Sarah Miller', 'sarah.miller@example.com', 'Manager', 'Marketing', '2026-01-06'],
+            ['david.taylor', 'David', 'Taylor', 'David Taylor', 'david.taylor@example.com', 'Sales Rep', 'Sales', '2026-01-07'],
+            ['jessica.anderson', 'Jessica', 'Anderson', 'Jessica Anderson', 'jessica.anderson@example.com', 'HR', 'HR', '2026-01-08'],
+            ['james.thomas', 'James', 'Thomas', 'James Thomas', 'james.thomas@example.com', 'Lead', 'IT', '2026-01-09'],
+            ['linda.jackson', 'Linda', 'Jackson', 'Linda Jackson', 'linda.jackson@example.com', 'Coordinator', 'Marketing', '2026-01-10'],
+            ['william.white', 'William', 'White', 'William White', 'william.white@example.com', 'Accountant', 'Finance', '2026-01-11'],
+            ['barbara.harris', 'Barbara', 'Harris', 'Barbara Harris', 'barbara.harris@example.com', 'Designer', 'Design', '2026-01-12'],
+            ['richard.martin', 'Richard', 'Martin', 'Richard Martin', 'richard.martin@example.com', 'Sales Rep', 'Sales', '2026-01-13'],
+            ['susan.thompson', 'Susan', 'Thompson', 'Susan Thompson', 'susan.thompson@example.com', 'HR', 'HR', '2026-01-14'],
+            ['joseph.garcia', 'Joseph', 'Garcia', 'Joseph Garcia', 'joseph.garcia@example.com', 'Developer', 'IT', '2026-01-15'],
+            ['margaret.martinez', 'Margaret', 'Martinez', 'Margaret Martinez', 'margaret.martinez@example.com', 'Manager', 'Design', '2026-01-16'],
+            ['charles.robinson', 'Charles', 'Robinson', 'Charles Robinson', 'charles.robinson@example.com', 'Analyst', 'Finance', '2026-01-17'],
+            ['karen.clark', 'Karen', 'Clark', 'Karen Clark', 'karen.clark@example.com', 'Support', 'IT', '2026-01-18'],
+            ['christopher.rodriguez', 'Christopher', 'Rodriguez', 'Christopher Rodriguez', 'christopher.rodriguez@example.com', 'Sales Rep', 'Sales', '2026-01-19'],
+            ['nancy.lewis', 'Nancy', 'Lewis', 'Nancy Lewis', 'nancy.lewis@example.com', 'Marketing', 'Marketing', '2026-01-20'],
+            ['daniel.lee', 'Daniel', 'Lee', 'Daniel Lee', 'daniel.lee@example.com', 'Developer', 'IT', '2026-01-21'],
+            ['betty.walker', 'Betty', 'Walker', 'Betty Walker', 'betty.walker@example.com', 'Designer', 'Design', '2026-01-22'],
+            ['paul.hall', 'Paul', 'Hall', 'Paul Hall', 'paul.hall@example.com', 'Manager', 'Sales', '2026-01-23'],
+            ['helen.allen', 'Helen', 'Allen', 'Helen Allen', 'helen.allen@example.com', 'Analyst', 'Finance', '2026-01-24'],
+            ['mark.young', 'Mark', 'Young', 'Mark Young', 'mark.young@example.com', 'Support', 'IT', '2026-01-25'],
+        ];
+
+        $data = [];
+        foreach ($employees as $emp) {
+            $data[] = [
+                'uuid' => Uuid::v4(),
+                'username' => $emp[0],
+                'password' => $password,
+                'first_name' => $emp[1],
+                'last_name' => $emp[2],
+                'full_name' => $emp[3],
+                'email' => $emp[4],
+                'phone' => '0' . rand(10000000, 99999999),
+                'position' => $emp[5],
+                'department' => $emp[6],
+                'date_hired' => $emp[7],
+                'status_id' => 1,
+                'created_at' => $createdAt,
+            ];
+        }
+
+        $this->table('tbl_employees')->insert($data)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->execute("DELETE FROM tbl_employees WHERE username LIKE 'emp%' OR email LIKE '%@example.com'");
+    }
+}
+
+
+
+==================================================
+FILE: 20260611010000_seed_leave_and_attendance_2026.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class SeedLeaveAndAttendance2026 extends AbstractMigration
+{
+    public function up(): void
+    {
+        // 1. Fetch all employees
+        $employees = $this->fetchAll('SELECT id FROM tbl_employees');
+        if (empty($employees)) {
+            throw new RuntimeException('No employees found to seed data.');
+        }
+
+        // Define 2026 Cambodian Holidays
+        $holidays = [
+            '2026-01-01', '2026-01-07', '2026-03-08', '2026-04-14', '2026-04-15', '2026-04-16',
+            '2026-05-01', '2026-05-05', '2026-05-14', '2026-06-18', '2026-09-24', '2026-10-10',
+            '2026-10-11', '2026-10-12', '2026-10-15', '2026-10-29', '2026-11-09', '2026-11-23',
+            '2026-11-24', '2026-11-25', '2026-12-29'
+        ];
+
+        // 2. Seed Leave Applications (randomized)
+        $leaveData = [];
+        $createdAt = date('Y-m-d H:i:s');
+        
+        $minTimestamp = strtotime('2026-01-01');
+        $maxTimestamp = strtotime('2026-06-10');
+        
+        foreach ($employees as $index => $emp) {
+            // Randomly decide if an employee has a leave application (e.g., 50% chance)
+            if (rand(0, 1)) {
+                $randomTimestamp = rand($minTimestamp, $maxTimestamp);
+                $startDate = date('Y-m-d', $randomTimestamp);
+                $endDate = date('Y-m-d', strtotime($startDate . ' + ' . rand(0, 2) . ' days'));
+                
+                $leaveData[] = [
+                    'uuid'          => Uuid::v4(),
+                    'employee_id'   => $emp['id'],
+                    'leave_type_id' => rand(1, 3), // Assuming 3 leave types
+                    'start_date'    => $startDate,
+                    'end_date'      => $endDate,
+                    'reason'        => 'Random reason for leave',
+                    'status_id'     => rand(0, 2),
+                    'created_at'    => $createdAt,
+                ];
+            }
+        }
+        if (!empty($leaveData)) {
+            $this->table('tbl_leave_applications')->insert($leaveData)->saveData();
+        }
+
+        // 3. Seed Attendance Records from 2026-01-01 until 2026-06-10
+        $attendanceData = [];
+        $startDate = new DateTime('2026-01-01');
+        $endDate = new DateTime('2026-06-10');
+        $interval = new DateInterval('P1D');
+        $period = new DatePeriod($startDate, $interval, $endDate->modify('+1 day'));
+
+        foreach ($period as $date) {
+            $dateStr = $date->format('Y-m-d');
+            
+            // Skip Sunday (day of week 0)
+            if ($date->format('w') == 0) {
+                continue;
+            }
+
+            // Skip Holidays
+            if (in_array($dateStr, $holidays)) {
+                continue;
+            }
+
+            foreach ($employees as $emp) {
+                // Check-in 1 (08:00)
+                $attendanceData[] = [
+                    'uuid'          => Uuid::v4(),
+                    'employee_id'   => $emp['id'],
+                    'date'          => $dateStr,
+                    'check_time'    => '08:00:00',
+                    'scan_datetime' => $dateStr . ' 08:00:00',
+                    'check_type_id' => 1,
+                    'status'        => 'On Time',
+                    'status_id'     => 1,
+                    'created_at'    => $createdAt,
+                ];
+                // Check-out 1 (12:00)
+                $attendanceData[] = [
+                    'uuid'          => Uuid::v4(),
+                    'employee_id'   => $emp['id'],
+                    'date'          => $dateStr,
+                    'check_time'    => '12:00:00',
+                    'scan_datetime' => $dateStr . ' 12:00:00',
+                    'check_type_id' => 2,
+                    'status'        => 'On Time',
+                    'status_id'     => 1,
+                    'created_at'    => $createdAt,
+                ];
+                // Check-in 2 (13:00)
+                $attendanceData[] = [
+                    'uuid'          => Uuid::v4(),
+                    'employee_id'   => $emp['id'],
+                    'date'          => $dateStr,
+                    'check_time'    => '13:00:00',
+                    'scan_datetime' => $dateStr . ' 13:00:00',
+                    'check_type_id' => 3,
+                    'status'        => 'On Time',
+                    'status_id'     => 1,
+                    'created_at'    => $createdAt,
+                ];
+                // Check-out 2 (17:00)
+                $attendanceData[] = [
+                    'uuid'          => Uuid::v4(),
+                    'employee_id'   => $emp['id'],
+                    'date'          => $dateStr,
+                    'check_time'    => '17:00:00',
+                    'scan_datetime' => $dateStr . ' 17:00:00',
+                    'check_type_id' => 4,
+                    'status'        => 'On Time',
+                    'status_id'     => 1,
+                    'created_at'    => $createdAt,
+                ];
+            }
+        }
+        $this->table('tbl_attendance_records')->insert($attendanceData)->saveData();
+    }
+
+    public function down(): void
+    {
+        $this->execute("DELETE FROM tbl_leave_applications WHERE start_date >= '2026-01-01'");
+        $this->execute("DELETE FROM tbl_attendance_records WHERE date >= '2026-01-01'");
+    }
+}
+
+
+
+==================================================
+FILE: 20260613120020_create_payroll_module_tables.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class CreatePayrollModuleTables extends AbstractMigration
+{
+    public function up(): void
+    {
+        // 1. Salary Configurations
+        $salaryConfig = $this->table('tbl_salary_configurations');
+        $salaryConfig
+            ->addColumn('employee_id', 'integer')
+            ->addColumn('base_salary', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('allowance_transport', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('allowance_food', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('allowance_phone', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('allowance_other', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['employee_id'], ['unique' => true])
+            ->create();
+
+        // 2. Payroll Periods
+        $payrollPeriods = $this->table('tbl_payroll_periods');
+        $payrollPeriods
+            ->addColumn('name', 'string', ['limit' => 100])
+            ->addColumn('month', 'integer', ['limit' => 2])
+            ->addColumn('year', 'integer', ['limit' => 4])
+            ->addColumn('status', 'enum', ['values' => ['draft', 'approved', 'paid'], 'default' => 'draft'])
+            ->addColumn('total_employees', 'integer', ['default' => 0])
+            ->addColumn('total_amount', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('processed_at', 'datetime', ['null' => true])
+            ->addColumn('approved_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['month', 'year'], ['unique' => true])
+            ->create();
+
+        // 3. Payroll Records (The individual payslip data)
+        $payrollRecords = $this->table('tbl_payroll_records');
+        $payrollRecords
+            ->addColumn('payroll_period_id', 'integer')
+            ->addColumn('employee_id', 'integer')
+            ->addColumn('base_salary', 'decimal', ['precision' => 15, 'scale' => 2])
+            ->addColumn('total_allowances', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('overtime_hours', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('overtime_amount', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('unpaid_leave_days', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('unpaid_leave_deduction', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('tax_amount', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('other_deductions', 'decimal', ['precision' => 15, 'scale' => 2, 'default' => 0.00])
+            ->addColumn('net_salary', 'decimal', ['precision' => 15, 'scale' => 2])
+            ->addColumn('payment_status', 'enum', ['values' => ['pending', 'paid'], 'default' => 'pending'])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['payroll_period_id'])
+            ->addIndex(['employee_id'])
+            ->create();
+    }
+
+    public function down(): void
+    {
+        $this->table('tbl_payroll_records')->drop()->save();
+        $this->table('tbl_payroll_periods')->drop()->save();
+        $this->table('tbl_salary_configurations')->drop()->save();
+    }
+}
+
+
+
+==================================================
+FILE: 20260809090000_create_attendance_locations_table.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+use App\Support\Uuid;
+
+final class CreateAttendanceLocationsTable extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_attendance_locations', ['signed' => false]);
+        $table
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('latitude', 'decimal', ['precision' => 10, 'scale' => 8])
+            ->addColumn('longitude', 'decimal', ['precision' => 11, 'scale' => 8])
+            ->addColumn('radius', 'integer')
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'inactive'])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['status'])
+            ->create();
+
+        $this->seedPermission();
+        $this->seedInitialLocation();
+    }
+
+    public function down(): void
+    {
+        $permission = $this->fetchRow(
+            "SELECT id FROM tbl_permissions WHERE module = 'attendance' AND action = 'manage_location' LIMIT 1"
+        );
+
+        if (!empty($permission['id'])) {
+            $this->execute(
+                'DELETE FROM tbl_role_permissions WHERE permission_id = ' . (int) $permission['id']
+            );
+            $this->execute(
+                'DELETE FROM tbl_permissions WHERE id = ' . (int) $permission['id']
+            );
+        }
+
+        $this->table('tbl_attendance_locations')->drop()->save();
+    }
+
+    private function seedPermission(): void
+    {
+        $existing = $this->fetchRow(
+            "SELECT id FROM tbl_permissions WHERE module = 'attendance' AND action = 'manage_location' LIMIT 1"
+        );
+
+        if (!empty($existing['id'])) {
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $permissionUuid = Uuid::v4();
+
+        $this->execute(
+            "INSERT INTO tbl_permissions (uuid, module, action, description, status_id, created_at, created_by)
+             VALUES ('{$permissionUuid}', 'attendance', 'manage_location', 'Manage attendance locations', 1, '{$now}', NULL)"
+        );
+
+        $permission = $this->fetchRow(
+            "SELECT id FROM tbl_permissions WHERE module = 'attendance' AND action = 'manage_location' LIMIT 1"
+        );
+        $permissionId = (int) ($permission['id'] ?? 0);
+
+        if ($permissionId > 0) {
+            $this->execute(
+                'INSERT IGNORE INTO tbl_role_permissions (role_id, permission_id) VALUES (1, ' . $permissionId . ')'
+            );
+        }
+    }
+
+    private function seedInitialLocation(): void
+    {
+        $existing = $this->fetchRow('SELECT id FROM tbl_attendance_locations LIMIT 1');
+        if (!empty($existing['id'])) {
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $this->execute(
+            "INSERT INTO tbl_attendance_locations (name, latitude, longitude, radius, status, created_at, updated_at)
+             VALUES ('Sangkat Srah Chak', 11.58091400, 104.90983200, 100, 'active', '{$now}', '{$now}')"
+        );
+    }
+}
+
+
+
+==================================================
+FILE: 20260809100000_add_note_to_attendance_records.php
+==================================================
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Migration\AbstractMigration;
+
+final class AddNoteToAttendanceRecords extends AbstractMigration
+{
+    public function up(): void
+    {
+        $table = $this->table('tbl_attendance_records');
+
+        if (!$table->hasColumn('note')) {
+            $table->addColumn('note', 'text', ['null' => true, 'after' => 'status'])->update();
+        }
+    }
+
+    public function down(): void
+    {
+        $table = $this->table('tbl_attendance_records');
+
+        if ($table->hasColumn('note')) {
+            $table->removeColumn('note')->update();
+        }
+    }
+}
+
+
+

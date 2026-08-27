@@ -253,8 +253,12 @@ class AuthService
             return ['success' => false, 'message' => 'Passwords do not match.', 'code' => 400];
         }
 
-        if (strlen($password) < 8) {
-            return ['success' => false, 'message' => 'Password must be at least 8 characters long.', 'code' => 400];
+        // if (strlen($password) < 8) {
+        //     return ['success' => false, 'message' => 'Password must be at least 8 characters long.', 'code' => 400];
+        // }
+        $passwordError = \App\Helpers\PasswordPolicy::validate($password);
+        if ($passwordError !== null) {
+            return ['success' => false, 'message' => $passwordError, 'code' => 400];
         }
 
         // Verify token existence

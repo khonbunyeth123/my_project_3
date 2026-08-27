@@ -75,7 +75,7 @@ class ControllerRole
             $this->checkPermission('roles.manage');
 
             $input = $this->getJsonInput();
-
+            error_log("ROLE STORE INPUT: " . json_encode($input));
             $role = $this->roleService->createRole([
                 'name' => $input['name'] ?? '',
                 'slug' => $input['slug'] ?? '',

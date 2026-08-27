@@ -67,7 +67,7 @@ class RoleService
     /**
      * Create a new role with permissions
      */
-    public function createRole($data)
+        public function createRole($data)
     {
         // Validate required fields
         if (empty($data['name'])) {
@@ -89,14 +89,29 @@ class RoleService
             $data['slug'] = $this->generateSlug($data['name']);
         }
 
-        // Create role
+        // Check for a soft-deleted role with the same slug — restore it instead of failing
+        $deletedRole = $this->roleModel->findDeletedRoleBySlug($data['slug']);
+
         try {
-            $roleId = $this->roleModel->createRole([
-                'name' => trim($data['name']),
-                'slug' => trim($data['slug']),
-                'description' => trim($data['description'] ?? ''),
-                'status_id' => 2 // Default to pending
-            ]);
+            if ($deletedRole) {
+                $roleId = $this->roleModel->restoreRole($deletedRole['id'], [
+                    'name' => trim($data['name']),
+                    'description' => trim($data['description'] ?? ''),
+                    'status_id' => 2
+                ]);
+            } else {
+                // Slug still active on a non-deleted role? Block with a clean error
+                if ($this->roleModel->slugExists($data['slug'])) {
+                    throw new Exception('Role slug already exists', 422);
+                }
+
+                $roleId = $this->roleModel->createRole([
+                    'name' => trim($data['name']),
+                    'slug' => trim($data['slug']),
+                    'description' => trim($data['description'] ?? ''),
+                    'status_id' => 2
+                ]);
+            }
 
             // Assign permissions if provided
             if (!empty($data['permissions']) && is_array($data['permissions'])) {
@@ -105,7 +120,10 @@ class RoleService
 
             return $this->getRoleWithPermissions($roleId);
         } catch (Exception $e) {
-            throw new Exception('Failed to create role: ' . $e->getMessage(), 500);
+            // Preserve the original status code (e.g. 422) instead of forcing 500
+            $code = $e->getCode();
+            $code = ($code >= 400 && $code < 500) ? $code : 500;
+            throw new Exception($code === 500 ? ('Failed to create role: ' . $e->getMessage()) : $e->getMessage(), $code);
         }
     }
 

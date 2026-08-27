@@ -7,6 +7,7 @@ use App\Repository\LeaveRepositoryInterface;
 use App\Enum\LeaveStatus;
 use App\Event\LeaveApprovedEvent;
 use App\Event\LeaveRejectedEvent;
+use App\Event\LeaveCancelledEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use App\Services\LeaveAuditService;
 use App\Services\NotificationService;
@@ -152,7 +153,11 @@ class LeaveService
             throw new LogicException('Only approved leaves can be cancelled.');
         }
 
-        return $this->repository->cancelApproval((int) $leave['id'], $actorId);
+        $result = $this->repository->cancelApproval((int) $leave['id'], $actorId);
+        if ($result) {
+            $this->eventDispatcher->dispatch(new LeaveCancelledEvent($leave));
+        }
+        return $result;
     }
 
     /**

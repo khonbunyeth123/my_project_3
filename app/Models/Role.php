@@ -142,7 +142,7 @@ class Role
     public function createRole($data)
     {
         $uuid = Uuid::v4();
-        $now = date('Y-m-d H:i:s');
+        $now = date('Y-m-d H:i:s'); 
         $createdBy = $_SESSION['user_id'] ?? null;
 
         $query = "INSERT INTO tbl_roles (uuid, name, slug, description, status_id, created_at, created_by)
@@ -216,6 +216,59 @@ class Role
         
         $stmt = $this->pdo->prepare($query);
         return $stmt->execute([$now, $deletedBy, $id]);
+    }
+
+    /**
+     * Find a soft-deleted role matching this slug (if any)
+     */
+    public function findDeletedRoleBySlug($slug)
+    {
+        $query = "SELECT id, name, slug FROM tbl_roles WHERE slug = ? AND deleted_at IS NOT NULL LIMIT 1";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([$slug]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Check if slug exists (including soft-deleted rows, since DB has a raw UNIQUE constraint)
+     */
+    public function slugExists($slug, $excludeId = null)
+    {
+        $query = "SELECT COUNT(*) as count FROM tbl_roles WHERE slug = ?";
+        $params = [$slug];
+        if ($excludeId) {
+            $query .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetch(\PDO::FETCH_ASSOC)['count'] > 0;
+    }
+
+    /**
+     * Restore a soft-deleted role and reset it to pending with new data
+     */
+    public function restoreRole($id, $data)
+    {
+        $now = date('Y-m-d H:i:s');
+        $userId = $_SESSION['user_id'] ?? null;
+
+        $query = "UPDATE tbl_roles 
+                  SET name = ?, description = ?, status_id = ?, 
+                      deleted_at = NULL, deleted_by = NULL,
+                      updated_at = ?, updated_by = ?
+                  WHERE id = ?";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([
+            $data['name'],
+            $data['description'] ?? null,
+            $data['status_id'] ?? 2,
+            $now,
+            $userId,
+            $id
+        ]);
+
+        return $id;
     }
 
     /**

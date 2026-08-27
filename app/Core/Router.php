@@ -131,6 +131,12 @@ class Router
 
             // Use Container for autowiring
             $container = new \App\Core\Container();
+
+            // Register event subscribers before resolving the controller
+            $dispatcher = $container->get(\Symfony\Component\EventDispatcher\EventDispatcher::class);
+            $dispatcher->addSubscriber($container->get(\App\EventSubscriber\DashboardCacheSubscriber::class));
+            $dispatcher->addSubscriber($container->get(\App\EventSubscriber\AttendanceLeaveSubscriber::class));
+
             $controller = $container->get($controllerClass);
 
             if (!method_exists($controller, $actionMethod)) {

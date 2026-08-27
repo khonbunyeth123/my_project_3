@@ -68,6 +68,7 @@
                     </div>
                 </div>
 
+
                 <!-- Confirm Password Field -->
                 <div class="mb-6">
                     <label for="confirm_password" class="block text-gray-700 font-semibold mb-2">
@@ -92,6 +93,14 @@
                         </button>
                     </div>
                 </div>
+
+                <ul id="pwRequirements" class="text-xs text-gray-500 mb-4 space-y-1">
+                    <li id="req-length">• At least 8 characters</li>
+                    <li id="req-upper">• At least 1 uppercase letter</li>
+                    <li id="req-lower">• At least 1 lowercase letter</li>
+                    <li id="req-number">• At least 1 number</li>
+                    <li id="req-special">• At least 1 special character (e.g. @, #, $, %, !)</li>
+                </ul>
 
                 <!-- Submit Button -->
                 <button
@@ -124,6 +133,7 @@
 const resetPasswordForm = document.getElementById('resetPasswordForm');
 const submitBtn = document.getElementById('submitBtn');
 const alertBox = document.getElementById('alert');
+const passwordInput = document.getElementById('password');
 
 function togglePasswordVisibility(id) {
     const input = document.getElementById(id);
@@ -148,6 +158,41 @@ function showAlert(message, type) {
     alertBox.classList.remove('hidden');
 }
 
+// Mirrors App\Helpers\PasswordPolicy::validate() on the backend
+function checkPasswordRequirements(password) {
+    const checks = {
+        length:  password.length >= 8,
+        upper:   /[A-Z]/.test(password),
+        lower:   /[a-z]/.test(password),
+        number:  /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+    };
+
+    for (const [key, passed] of Object.entries(checks)) {
+        const el = document.getElementById(`req-${key}`);
+        if (!el) continue;
+        el.classList.toggle('text-green-600', passed);
+        el.classList.toggle('text-gray-500', !passed);
+    }
+
+    return Object.values(checks).every(Boolean);
+}
+
+function getPasswordError(password) {
+    if (password.length < 8) return 'Password must be at least 8 characters long.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least 1 uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least 1 lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least 1 number.';
+    if (!/[^A-Za-z0-9]/.test(password)) return 'Password must contain at least 1 special character (e.g. @, #, $, %, !).';
+    return null;
+}
+
+if (passwordInput) {
+    passwordInput.addEventListener('input', () => {
+        checkPasswordRequirements(passwordInput.value);
+    });
+}
+
 if (resetPasswordForm) {
     resetPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -157,8 +202,9 @@ if (resetPasswordForm) {
         const password = formData.get('password');
         const confirmPassword = formData.get('confirm_password');
 
-        if (password.length < 8) {
-            showAlert('Password must be at least 8 characters long.', 'error');
+        const pwError = getPasswordError(password);
+        if (pwError) {
+            showAlert(pwError, 'error');
             return;
         }
 

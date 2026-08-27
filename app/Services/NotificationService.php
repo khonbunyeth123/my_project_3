@@ -10,9 +10,10 @@ class NotificationService
         $this->serviceAccountPath = __DIR__ . '/../../config/firebase-service-account.json';
         $this->projectId = 'hrm-doorstep';
     }
-    public function sendLeaveApproved(int $employeeId): void
+        public function sendLeaveApproved(int $employeeId): void
     {
         $fcmToken = $this->getFcmToken($employeeId);
+        error_log("[DEBUG] sendLeaveApproved employeeId={$employeeId} token=" . ($fcmToken ?? 'NULL'));
         if (!$fcmToken) return;
         $this->send($fcmToken, ['title' => '✅ Leave Approved', 'body' => 'Your leave request has been approved.'], ['type' => 'leave_status', 'status' => 'approved']);
     }
@@ -46,6 +47,11 @@ class NotificationService
     public function saveFcmToken(int $employeeId, string $fcmToken): bool
     {
         $db = \App\Core\Database::getInstance()->getConnection();
+
+        // Clear this token from any other employee that currently holds it
+        $clear = $db->prepare('UPDATE tbl_employees SET fcm_token = NULL WHERE fcm_token = :fcm_token AND id != :id');
+        $clear->execute([':fcm_token' => $fcmToken, ':id' => $employeeId]);
+
         $stmt = $db->prepare('UPDATE tbl_employees SET fcm_token = :fcm_token WHERE id = :id');
         return $stmt->execute([':fcm_token' => $fcmToken, ':id' => $employeeId]);
     }

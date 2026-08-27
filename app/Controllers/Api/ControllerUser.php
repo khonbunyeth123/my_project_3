@@ -5,6 +5,7 @@ namespace App\Controllers\Api;
 use App\Models\User;
 use App\Services\UserService;
 use App\Helpers\Response;
+use App\Helpers\PasswordPolicy;
 
 class ControllerUser
 {
@@ -82,10 +83,20 @@ class ControllerUser
                 $errors['email'] = 'Invalid email format';
             }
 
+            // if (empty($password)) {
+            //     $errors['password'] = 'Password is required';
+            // } elseif (strlen($password) < 6) {
+            //     $errors['password'] = 'Password must be at least 6 characters';
+            // }
+
+
             if (empty($password)) {
                 $errors['password'] = 'Password is required';
-            } elseif (strlen($password) < 6) {
-                $errors['password'] = 'Password must be at least 6 characters';
+            } else {
+                $passwordError = PasswordPolicy::validate($password);
+                if ($passwordError !== null) {
+                    $errors['password'] = $passwordError;
+                }
             }
 
             if (empty($role_id)) {
@@ -156,10 +167,26 @@ class ControllerUser
                 Response::validationError(['id' => 'Invalid user ID']);
             }
 
+            // $full_name  = isset($input['full_name'])  ? trim($input['full_name'])  : '';
+            // $email      = isset($input['email'])       ? trim($input['email'])      : '';
+            // $role_id    = isset($input['role_id'])     ? trim($input['role_id'])    : '';
+            // $status_id  = isset($input['status_id'])   ? (int)$input['status_id']  : null;
+
+            // $updated_by = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+
+            // $data = [
+            //     'full_name'  => $full_name,
+            //     'email'      => $email,
+            //     'role_id'    => $role_id,
+            //     'status_id'  => $status_id,
+            //     'updated_by' => $updated_by
+            // ];
+
             $full_name  = isset($input['full_name'])  ? trim($input['full_name'])  : '';
             $email      = isset($input['email'])       ? trim($input['email'])      : '';
             $role_id    = isset($input['role_id'])     ? trim($input['role_id'])    : '';
             $status_id  = isset($input['status_id'])   ? (int)$input['status_id']  : null;
+            $password   = isset($input['password'])    ? trim($input['password'])   : '';
 
             $updated_by = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 
@@ -170,6 +197,17 @@ class ControllerUser
                 'status_id'  => $status_id,
                 'updated_by' => $updated_by
             ];
+
+            // Only touch the password if the caller actually sent one — leaves it
+            // unchanged otherwise, matching Models\User::update()'s existing behavior.
+            if ($password !== '') {
+                $passwordError = PasswordPolicy::validate($password);
+                if ($passwordError !== null) {
+                    Response::validationError(['password' => $passwordError]);
+                    return;
+                }
+                $data['password'] = $password;
+            }
 
             $user = $this->userService->updateUser($id, $data);
 

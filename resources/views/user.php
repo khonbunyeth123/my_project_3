@@ -1,4 +1,3 @@
-
 <div class="w-full h-full p-2">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
@@ -78,8 +77,8 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                     <input type="text" id="createFullName" placeholder="John Doe"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        oninput="clearFieldError(this)">
-                    <p class="error-msg" id="createFullNameErr">Full name is required</p>
+                        oninput="clearFieldError(this, 'createFullNameErr')">
+                    <p class="hidden text-xs text-red-600 mt-1" id="createFullNameErr">Full name is required</p>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Username <span class="text-red-500">*</span></label>
@@ -87,9 +86,9 @@
                         <span class="absolute left-3 top-2.5 text-gray-400 text-sm">@</span>
                         <input type="text" id="createUsername" placeholder="johndoe"
                             class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            oninput="clearFieldError(this)">
+                            oninput="clearFieldError(this, 'createUsernameErr')">
                     </div>
-                    <p class="error-msg" id="createUsernameErr">Username is required</p>
+                    <p class="hidden text-xs text-red-600 mt-1" id="createUsernameErr">Username is required</p>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
@@ -97,26 +96,68 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
                     <input type="email" id="createEmail" placeholder="john@example.com"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        oninput="clearFieldError(this)">
-                    <p class="error-msg" id="createEmailErr">Valid email is required</p>
+                        oninput="clearFieldError(this, 'createEmailErr')">
+                    <p class="hidden text-xs text-red-600 mt-1" id="createEmailErr">Valid email is required</p>
                 </div>
+
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
-                    <input type="password" id="createPassword" placeholder="Enter a strong password"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        oninput="clearFieldError(this)">
-                    <p class="error-msg" id="createPasswordErr">Password is required</p>
+                    <div class="relative">
+                        <input type="password" id="createPassword" placeholder="Enter a strong password"
+                            class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                            oninput="clearFieldError(this, 'createPasswordErr'); updatePasswordChecklist('createPassword', 'createPasswordChecklist')"
+                            onfocus="if(this.value) document.getElementById('createPasswordChecklist').classList.remove('hidden')"
+                            onblur="document.getElementById('createPasswordChecklist').classList.add('hidden')">
+                            <button type="button" onclick="togglePasswordVisibility('createPassword', this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-indigo-600 bg-transparent border-0 p-0 leading-none focus:outline-none">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+
+                        <!-- Strength meter + checklist card — now positioned relative to THIS wrapper, so it sits flush under the input -->
+                        <div class="hidden absolute left-0 right-0 top-full mt-2 z-20 bg-white rounded-lg border border-gray-200 shadow-lg p-3" id="createPasswordChecklist">
+                            <div class="flex gap-1 mb-1.5">
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="0"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="1"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="2"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="3"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="4"></span>
+                            </div>
+                            <p class="text-xs font-semibold mb-2" id="createPasswordStatus"></p>
+
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-1.5 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="length">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> 8+ characters
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="upper" title="Uppercase letter A-Z">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Uppercase
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="lower" title="Lowercase letter a-z">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Lowercase
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="number" title="A number 0-9">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Number
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors col-span-2 whitespace-nowrap" data-rule="special" title="A special character such as @ # $ % !">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Special character (@ # $ % !)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="hidden text-xs text-red-600 mt-1" id="createPasswordErr">Password is required</p>
                 </div>
+
+                
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
                     <select id="createRoleId"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                        onchange="clearFieldError(this)">
+                        onchange="clearFieldError(this, 'createRoleErr')">
                         <option value="">Select role...</option>
                     </select>
-                    <p class="error-msg" id="createRoleErr">Role is required</p>
+                    <p class="hidden text-xs text-red-600 mt-1" id="createRoleErr">Role is required</p>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
@@ -155,8 +196,8 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                     <input type="text" id="editFullName"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        oninput="clearFieldError(this)">
-                    <p class="error-msg" id="editFullNameErr">Full name is required</p>
+                        oninput="clearFieldError(this, 'editFullNameErr')">
+                    <p class="hidden text-xs text-red-600 mt-1" id="editFullNameErr">Full name is required</p>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
@@ -173,26 +214,71 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
                     <input type="email" id="editEmail"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        oninput="clearFieldError(this)">
-                    <p class="error-msg" id="editEmailErr">Valid email is required</p>
+                        oninput="clearFieldError(this, 'editEmailErr')">
+                    <p class="hidden text-xs text-red-600 mt-1" id="editEmailErr">Valid email is required</p>
                 </div>
+
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Password <span class="text-xs text-gray-400 font-normal">(leave blank to keep)</span>
                     </label>
-                    <input type="password" id="editPassword" placeholder="New password (optional)"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="relative">
+                        <input type="password" id="editPassword" placeholder="New password (optional)"
+                            class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                            oninput="clearFieldError(this, 'editPasswordErr'); updatePasswordChecklist('editPassword', 'editPasswordChecklist')"
+                            onfocus="if(this.value) document.getElementById('editPasswordChecklist').classList.remove('hidden')"
+                            onblur="document.getElementById('editPasswordChecklist').classList.add('hidden')">
+                        <button type="button" onclick="togglePasswordVisibility('editPassword', this)"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-indigo-600 bg-transparent border-0 p-0 leading-none focus:outline-none">
+                            <i class="fas fa-eye text-sm"></i>
+                        </button>
+
+                        <div class="hidden absolute left-0 right-0 top-full mt-2 z-20 bg-white rounded-lg border border-gray-200 shadow-lg p-3" id="editPasswordChecklist">
+                            <div class="flex gap-1 mb-1.5">
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="0"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="1"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="2"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="3"></span>
+                                <span class="h-1 flex-1 rounded-full bg-gray-200 transition-colors duration-200" data-bar="4"></span>
+                            </div>
+                            <p class="text-xs font-semibold mb-2" id="editPasswordStatus"></p>
+
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-1.5 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="length">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> 8+ characters
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="upper" title="Uppercase letter A-Z">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Uppercase
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="lower" title="Lowercase letter a-z">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Lowercase
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors whitespace-nowrap" data-rule="number" title="A number 0-9">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Number
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400 transition-colors col-span-2 whitespace-nowrap" data-rule="special" title="A special character such as @ # $ % !">
+                                    <i class="fas fa-circle text-[5px] w-3 text-center shrink-0"></i> Special character (@ # $ % !)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="hidden text-xs text-red-600 mt-1" id="editPasswordErr">Password does not meet requirements</p>
                 </div>
+
+
             </div>
+
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
                     <select id="editRoleId"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                        onchange="clearFieldError(this)">
+                        onchange="clearFieldError(this, 'editRoleErr')">
                         <option value="">Select role...</option>
                     </select>
-                    <p class="error-msg" id="editRoleErr">Role is required</p>
+                    <p class="hidden text-xs text-red-600 mt-1" id="editRoleErr">Role is required</p>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
@@ -242,8 +328,34 @@
 <!-- Toast -->
 <div id="toastContainer" class="toast-container"></div>
 
+<style>
+/* Hide native password reveal/clear icons so only our custom eye button shows */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+}
+</style>
+
 <!-- ===================== JAVASCRIPT ===================== -->
 <script>
+
+document.addEventListener('click', (e) => {
+    ['createPasswordChecklist', 'editPasswordChecklist'].forEach(id => {
+        const checklist = document.getElementById(id);
+        const input = document.getElementById(id.replace('Checklist', ''));
+        if (checklist && !checklist.classList.contains('hidden')) {
+            if (!checklist.contains(e.target) && e.target !== input) {
+                checklist.classList.add('hidden');
+            }
+        }
+    });
+});
+
 // ─── CONFIG ───────────────────────────────────────────────
 const API_BASE = (function() {
     const match = window.location.pathname.match(/^(.*\/admin)/);
@@ -393,6 +505,8 @@ function openCreateModal() {
     document.getElementById('createPassword').value = '';
     document.getElementById('createRoleId').value   = '';
     document.getElementById('createStatus').value   = '1';
+    document.getElementById('createPasswordChecklist').classList.add('hidden');
+    document.getElementById('createPasswordStatus').classList.add('hidden');
     openModal('createUserModal');
 }
 
@@ -408,7 +522,19 @@ async function submitCreateUser() {
     if (!fullName) { showFieldError('createFullName','createFullNameErr','Full name is required'); valid = false; }
     if (!username) { showFieldError('createUsername','createUsernameErr','Username is required'); valid = false; }
     if (!email || !email.includes('@')) { showFieldError('createEmail','createEmailErr','Valid email is required'); valid = false; }
-    if (!password) { showFieldError('createPassword','createPasswordErr','Password is required'); valid = false; }
+
+    if (!password) {
+        showFieldError('createPassword','createPasswordErr','Password is required');
+        valid = false;
+    } else {
+        const pwErr = getPasswordPolicyError(password);
+        if (pwErr) {
+            showFieldError('createPassword','createPasswordErr', pwErr);
+            document.getElementById('createPasswordChecklist').classList.remove('hidden');
+            valid = false;
+        }
+    }
+
     if (!roleId)   { showFieldError('createRoleId','createRoleErr','Role is required'); valid = false; }
     if (!valid) return;
 
@@ -444,6 +570,8 @@ function openEditModal(userId) {
     document.getElementById('editPassword').value  = '';
     document.getElementById('editStatus').value    = String(user.status_id ?? 1);
     document.getElementById('editUserTitle').textContent = `Edit User: ${user.full_name}`;
+    document.getElementById('editPasswordChecklist').classList.add('hidden');
+    document.getElementById('editPasswordStatus').classList.add('hidden');
 
     // Set current role in dropdown
     const roleSelect = document.getElementById('editRoleId');
@@ -464,6 +592,17 @@ async function submitEditUser() {
     if (!fullName)               { showFieldError('editFullName','editFullNameErr','Full name is required'); valid = false; }
     if (!email || !email.includes('@')) { showFieldError('editEmail','editEmailErr','Valid email is required'); valid = false; }
     if (!roleId)                 { showFieldError('editRoleId','editRoleErr','Role is required'); valid = false; }
+
+    // Password is optional on edit — only enforce the policy if the user typed something
+    if (password) {
+        const pwErr = getPasswordPolicyError(password);
+        if (pwErr) {
+            showFieldError('editPassword','editPasswordErr', pwErr);
+            document.getElementById('editPasswordChecklist').classList.remove('hidden');
+            valid = false;
+        }
+    }
+
     if (!valid) return;
 
     const payload = { id, full_name: fullName, email, role_id: parseInt(roleId), status_id: parseInt(status) };
@@ -521,9 +660,21 @@ async function confirmDeleteUser() {
 
 function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
-    document.getElementById(id).querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
-    document.getElementById(id).querySelectorAll('.error-msg').forEach(el => el.classList.remove('show'));
+    const modal = document.getElementById(id);
+    modal.classList.add('hidden');
+
+    // Reset any red error borders on inputs/selects
+    modal.querySelectorAll('.border-red-500').forEach(el => {
+        el.classList.remove('border-red-500');
+        el.classList.add('border-gray-300');
+    });
+
+    // Re-hide every error message (Tailwind's `hidden` utility)
+    modal.querySelectorAll('[id$="Err"]').forEach(el => el.classList.add('hidden'));
+
+    // Re-hide password checklist/status messages (scoped to avoid matching
+    // the createStatus/editStatus Active-Inactive <select> dropdowns)
+    modal.querySelectorAll('[id$="PasswordChecklist"], [id$="PasswordStatus"]').forEach(el => el.classList.add('hidden'));
 }
 
 document.addEventListener('keydown', e => {
@@ -540,16 +691,119 @@ function formatDate(str) {
     } catch { return '<span class="text-gray-400">—</span>'; }
 }
 
-function showFieldError(inputId, errId, msg) {
-    document.getElementById(inputId).classList.add('field-error');
-    const err = document.getElementById(errId);
-    err.textContent = msg; err.classList.add('show');
+// ─── PASSWORD STRENGTH (mirrors App\Helpers\PasswordPolicy::validate()) ──
+// Rules: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char.
+function getPasswordRuleResults(password) {
+    return {
+        length:  password.length >= 8,
+        upper:   /[A-Z]/.test(password),
+        lower:   /[a-z]/.test(password),
+        number:  /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+    };
 }
 
-function clearFieldError(input) {
-    input.classList.remove('field-error');
-    const err = input.parentElement.querySelector('.error-msg');
-    if (err) err.classList.remove('show');
+// Returns the first failed rule's message (same order/wording as the backend),
+// or null if the password satisfies every rule.
+function getPasswordPolicyError(password) {
+    const r = getPasswordRuleResults(password);
+    if (!r.length)  return 'Password must be at least 8 characters long';
+    if (!r.upper)   return 'Password must contain at least 1 uppercase letter';
+    if (!r.lower)   return 'Password must contain at least 1 lowercase letter';
+    if (!r.number)  return 'Password must contain at least 1 number';
+    if (!r.special) return 'Password must contain at least 1 special character (e.g. @, #, $, %, !)';
+    return null;
+}
+
+// Updates the ✓/✗ checklist under a password field as the user types.
+function updatePasswordChecklist(inputId, listId) {
+    const password  = document.getElementById(inputId).value;
+    const container = document.getElementById(listId);
+    if (!container) return;
+
+    // Hide the whole card when the field is empty, show it once typing starts
+    if (password.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+    container.classList.remove('hidden');
+
+    const results = getPasswordRuleResults(password);
+    const passedCount = Object.values(results).filter(Boolean).length;
+
+    // Update each rule row (icon + label color)
+    container.querySelectorAll('[data-rule]').forEach(row => {
+        const rule = row.dataset.rule;
+        const icon = row.querySelector('i');
+        const passed = results[rule];
+
+        row.classList.toggle('text-emerald-600', passed);
+        row.classList.toggle('text-gray-400', !passed);
+
+        icon.className = passed
+            ? 'fas fa-check-circle text-emerald-500 w-3 text-center'
+            : 'fas fa-circle text-[5px] w-3 text-center';
+    });
+
+    // Strength color: red (weak) -> amber (fair) -> emerald (strong)
+    let barColor = 'bg-red-400';
+    if (passedCount >= 5)      barColor = 'bg-emerald-500';
+    else if (passedCount >= 3) barColor = 'bg-amber-400';
+
+    // Fill segments left-to-right based on how many rules currently pass
+    container.querySelectorAll('[data-bar]').forEach(bar => {
+        const segmentIndex = parseInt(bar.dataset.bar, 10);
+        const filled = segmentIndex < passedCount;
+        bar.className = `h-1 flex-1 rounded-full transition-colors duration-200 ${filled ? barColor : 'bg-gray-200'}`;
+    });
+
+    // Plain-language status message, e.g. "createPasswordChecklist" -> "createPasswordStatus"
+    const statusId = listId.replace('Checklist', 'Status');
+    const statusEl  = document.getElementById(statusId);
+    if (!statusEl) return;
+
+    if (passedCount >= 5) {
+        statusEl.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Strong password';
+        statusEl.className = 'text-xs font-semibold mb-2 text-emerald-600';
+    } else if (passedCount >= 3) {
+        statusEl.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>Almost there';
+        statusEl.className = 'text-xs font-semibold mb-2 text-amber-600';
+    } else {
+        statusEl.innerHTML = '<i class="fas fa-times-circle mr-1"></i>Password is too weak';
+        statusEl.className = 'text-xs font-semibold mb-2 text-red-600';
+    }
+}
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon  = btn.querySelector('i');
+    const showing = input.type === 'text';
+
+    input.type = showing ? 'password' : 'text';
+    icon.className = showing ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+// ─── FIELD ERROR HANDLING (pure Tailwind, no custom CSS needed) ──────────
+function showFieldError(inputId, errId, msg) {
+    const input = document.getElementById(inputId);
+    input.classList.remove('border-gray-300');
+    input.classList.add('border-red-500');
+
+    const err = document.getElementById(errId);
+    err.textContent = msg;
+    err.classList.remove('hidden');
+}
+
+function clearFieldError(input, errId) {
+    input.classList.remove('border-red-500');
+    input.classList.add('border-gray-300');
+
+    // errId is passed explicitly now so this works regardless of how deeply
+    // the input is nested (e.g. Username's @ icon wrapper div).
+    const err = errId
+        ? document.getElementById(errId)
+        : input.parentElement.querySelector('[id$="Err"]');
+    if (err) err.classList.add('hidden');
 }
 
 function setLoading(btnId, loading, html) {
@@ -577,5 +831,3 @@ function showToast(message, type = 'success') {
     setTimeout(() => t.remove(), 5000);
 }
 </script>
-</body>
-</html>
