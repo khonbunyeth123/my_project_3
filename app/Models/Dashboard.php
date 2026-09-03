@@ -48,6 +48,18 @@ class Dashboard
     }
 
     /**
+     * Get count of active departments.
+     */
+    public function totalDepartments(): int
+    {
+        return $this->cache->get('dashboard.total_departments', function (ItemInterface $item) {
+            $item->expiresAfter(300);
+            $result = $this->db->query("SELECT COUNT(*) AS total FROM tbl_departments WHERE deleted_at IS NULL AND status_id = 1")->fetch(PDO::FETCH_ASSOC);
+            return $result ? (int) $result['total'] : 0;
+        });
+    }
+
+    /**
      * Get count of pending leave applications.
      */
     public function pendingLeaves(): int
@@ -86,6 +98,7 @@ class Dashboard
         return [
             'total_employees' => $this->totalEmployees(),
             'active_employees' => $this->activeEmployees(),
+            'total_departments' => $this->totalDepartments(),
             'pending_leaves' => $this->pendingLeaves(),
             'on_leave_today' => $this->onLeaveToday(),
         ];
@@ -97,13 +110,18 @@ class Dashboard
     public function departmentStats(): array
     {
         $sql = "
-            SELECT department AS name, COUNT(*) AS count
-            FROM tbl_employees
-            WHERE deleted_at IS NULL
-              AND department IS NOT NULL
-              AND TRIM(department) <> ''
-            GROUP BY department
-            ORDER BY count DESC, department ASC
+            SELECT
+                d.id,
+                d.name,
+                COUNT(e.id) AS count
+            FROM tbl_departments d
+            LEFT JOIN tbl_employees e
+                ON e.department_id = d.id
+               AND e.deleted_at IS NULL
+            WHERE d.deleted_at IS NULL
+              AND d.status_id = 1
+            GROUP BY d.id, d.name
+            ORDER BY count DESC, d.id DESC
         ";
 
         $stmt = $this->db->prepare($sql);

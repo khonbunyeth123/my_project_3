@@ -46,6 +46,10 @@ if ($basePath !== '' && strpos($uri, $basePath) === 0) {
 }
 if ($uri === '') $uri = '/';
 
+if ($uri === '/departments' || $uri === '/departments/') {
+    $_GET['page'] = 'departments';
+}
+
 error_log("DEBUG: Resolved URI: " . $uri);
 
 // -----------------------------------------------------------------------
@@ -83,7 +87,7 @@ $allowedPages = [
     'dashboard', 'attendance', 'employee', 'leave', 'audits',
     'report', 'report/report_daily', 'report/report_summary',
     'report/report_detail', 'report/report_top_employee',
-    'user', 'roles', 'permissions', 'checkin', 'calendar', 'payroll',
+    'user', 'roles', 'departments', 'permissions', 'checkin', 'calendar', 'payroll',
 ];
 
 $rawPage = $_GET['page'] ?? 'dashboard';
@@ -104,6 +108,7 @@ $pagePermissions = [
     'report/report_top_employee'  => ['report.view_top',     'report.view'],
     'user'                        => ['user.view',       'users.view'],
     'roles'                       => ['role.view',       'roles.view'],
+    'departments'                 => ['roles.manage'],
     'permissions'                 => ['permission.view', 'permissions.view'],
     'audits'                      => ['audits.view',     'audit.view'],
 ];

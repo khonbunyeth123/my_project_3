@@ -11,7 +11,7 @@
                 <?php 
                     $label = 'Add Employee'; $type = 'primary'; $size = 'xs'; $icon = 'mdi:plus-circle'; $attr = 'onclick="openCreateModal()"'; $id = null;
                     include 'component/button.php'; 
-                    $label = null; $attr = null; // Important: Reset
+                    $label = null; $attr = null; $icon = null; // Important: Reset
                 ?>
             </div>
         <?php 
@@ -218,8 +218,6 @@
                         <?php 
                             $label = 'Position'; $id = 'position'; $type = 'text'; $placeholder = 'Software Engineer'; $required = true; $icon = 'mdi:tag-outline';
                             include 'component/input.php';
-                            $label = 'Department'; $id = 'department'; $type = 'text'; $placeholder = 'Engineering'; $required = true; $icon = 'mdi:office-building-outline';
-                            include 'component/input.php';
                             $label = 'Date Hired'; $id = 'date_hired'; $type = 'date'; $required = true;
                             include 'component/input.php';
                             $label = 'Status'; $id = 'status_id'; $required = true; $placeholder = 'Select Status';
@@ -227,6 +225,29 @@
                             include 'component/select.php';
                             $label = null; // Reset 
                         ?>
+                        <div class="flex flex-col gap-1">
+                            <label for="department_id" class="text-[10px] font-black text-slate-500 normal-case tracking-wider">
+                                Department <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex-1">
+                                    <select
+                                        id="department_id"
+                                        name="department_id"
+                                        required
+                                        class="w-full border border-slate-200 rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-white appearance-none cursor-pointer pl-8"
+                                    >
+                                        <option value="">Loading departments...</option>
+                                    </select>
+                                    <div class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex items-center justify-center">
+                                        <span class="iconify text-[14px]" data-icon="mdi:office-building-outline"></span>
+                                    </div>
+                                    <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex items-center justify-center">
+                                        <span class="iconify text-[14px]" data-icon="mdi:chevron-down"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -250,7 +271,7 @@
         ?>
     </div>
 </div>
- 
+
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-950/40 backdrop-blur-[2px] p-4">
     <div class="w-full max-w-xs">
@@ -303,7 +324,7 @@ const phoneInput       = document.getElementById('phone');
 const addressInput     = document.getElementById('address');
 const dobInput         = document.getElementById('dob');
 const positionInput    = document.getElementById('position');
-const departmentInput  = document.getElementById('department');
+const departmentSelect = document.getElementById('department_id');
 const dateHiredInput   = document.getElementById('date_hired');
 const statusIdInput    = document.getElementById('status_id');
 const passwordInput    = document.getElementById('password');
@@ -330,6 +351,7 @@ const deleteEmpName    = document.getElementById('deleteEmployeeName');
 
 /* ── State ──────────────────────────────────── */
 let allEmployees    = [];
+let departmentCatalog = [];
 let currentPage     = 1;
 const perPage       = 18;
 let totalPages      = 1;
@@ -367,6 +389,90 @@ function decodeDataAttr(value) {
     } catch (err) {
         return String(value);
     }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function hasSelectOption(selectEl, value) {
+    return Array.from(selectEl?.options || []).some(option => String(option.value) === String(value));
+}
+
+function normalizeDepartmentRecord(raw) {
+    return {
+        id: raw?.id ?? '',
+        name: raw?.name ?? '',
+    };
+}
+
+function renderDepartmentOptions() {
+    if (!departmentSelect) return;
+
+    const currentValue = departmentSelect.value;
+    const currentFilterValue = departmentFilter ? departmentFilter.value : '';
+    const pendingId = departmentSelect.dataset.pendingId || '';
+    const pendingName = departmentSelect.dataset.pendingName || '';
+
+    departmentSelect.innerHTML = '<option value="">Select department</option>' + departmentCatalog
+        .map(dept => `<option value="${escapeHtml(dept.id)}">${escapeHtml(dept.name)}</option>`)
+        .join('');
+
+    const departmentFilterHtml = '<option value="">All Departments</option>' + departmentCatalog
+        .map(dept => `<option value="${escapeHtml(dept.name)}">${escapeHtml(dept.name)}</option>`)
+        .join('');
+
+    if (departmentFilter) {
+        departmentFilter.innerHTML = departmentFilterHtml;
+        if (currentFilterValue && hasSelectOption(departmentFilter, currentFilterValue)) {
+            departmentFilter.value = currentFilterValue;
+        }
+    }
+
+    if (pendingId && hasSelectOption(departmentSelect, pendingId)) {
+        departmentSelect.value = pendingId;
+    } else if (pendingName) {
+        const match = departmentCatalog.find(dept => String(dept.name).toLowerCase() === String(pendingName).toLowerCase());
+        if (match) {
+            departmentSelect.value = String(match.id);
+        }
+    } else if (currentValue && hasSelectOption(departmentSelect, currentValue)) {
+        departmentSelect.value = currentValue;
+    }
+
+    delete departmentSelect.dataset.pendingId;
+    delete departmentSelect.dataset.pendingName;
+}
+
+function setDepartmentSelection(id = '', name = '') {
+    if (!departmentSelect) return;
+
+    departmentSelect.dataset.pendingId = id ? String(id) : '';
+    departmentSelect.dataset.pendingName = name ? String(name) : '';
+    renderDepartmentOptions();
+}
+
+async function loadDepartments() {
+    try {
+        const res = await fetch('/api/departments');
+        const json = await res.json();
+
+        if (json.success && Array.isArray(json.data)) {
+            departmentCatalog = json.data.map(normalizeDepartmentRecord).filter(dept => dept.id && dept.name);
+        } else {
+            departmentCatalog = [];
+        }
+    } catch (err) {
+        console.error('Failed to load departments', err);
+        departmentCatalog = [];
+    }
+
+    renderDepartmentOptions();
 }
 
 /* ── Toast ──────────────────────────────────── */
@@ -483,13 +589,25 @@ async function loadEmployees() {
 
 /* ── Populate Filter Dropdowns ──────────────── */
 function populateFilters() {
-    const depts = [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort();
+    const currentDepartmentFilter = departmentFilter ? departmentFilter.value : '';
+    const currentPositionFilter = positionFilter ? positionFilter.value : '';
+
+    const sourceDepartments = departmentCatalog.length
+        ? departmentCatalog.map(dept => dept.name)
+        : [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort();
     const posts = [...new Set(allEmployees.map(e => e.position).filter(Boolean))].sort();
 
     departmentFilter.innerHTML = '<option value="">All Departments</option>' +
-        depts.map(d => `<option value="${d}">${d}</option>`).join('');
+        sourceDepartments.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
     positionFilter.innerHTML = '<option value="">All Positions</option>' +
-        posts.map(p => `<option value="${p}">${p}</option>`).join('');
+        posts.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+
+    if (currentDepartmentFilter && hasSelectOption(departmentFilter, currentDepartmentFilter)) {
+        departmentFilter.value = currentDepartmentFilter;
+    }
+    if (currentPositionFilter && hasSelectOption(positionFilter, currentPositionFilter)) {
+        positionFilter.value = currentPositionFilter;
+    }
 }
 
 /* ── Filter & Pagination ────────────────────── */
@@ -634,6 +752,7 @@ function normalizeEmployeeRecord(raw) {
         dob: e.dob ?? e.date_of_birth ?? e.birth_date ?? '',
         position: e.position ?? '',
         department: e.department ?? '',
+        department_id: e.department_id ?? '',
         date_hired: e.date_hired ?? e.hire_date ?? '',
         status_id: e.status_id ?? e.status ?? 1,
         photo: e.photo ?? e.avatar ?? null,
@@ -655,7 +774,7 @@ function fillEmployeeForm(rawEmployee) {
     addressInput.value      = e.address ?? '';
     dobInput.value          = toDateInputValue(e.dob);
     positionInput.value     = e.position ?? '';
-    departmentInput.value   = e.department ?? '';
+    setDepartmentSelection(e.department_id ?? '', e.department ?? '');
     dateHiredInput.value    = toDateInputValue(e.date_hired);
     statusIdInput.value     = String(e.status_id ?? 1);
     passwordInput.value     = '';
@@ -689,7 +808,7 @@ function openCreateModal() {
     const fields = [
         'employeeId', 'employee_code', 'username', 'first_name', 
         'last_name', 'gender', 'email', 'phone', 'address', 
-        'dob', 'position', 'department', 'date_hired', 'status_id', 'password'
+        'dob', 'position', 'department_id', 'date_hired', 'status_id', 'password'
     ];
     
     fields.forEach(id => {
@@ -702,6 +821,7 @@ function openCreateModal() {
     // 3. Reset UI components
     setPasswordMode(true);
     document.getElementById('date_hired').value = getCurrentDateString();
+    setDepartmentSelection('', '');
     document.getElementById('modalTitle').textContent = 'Add New Employee';
     document.getElementById('submitButton').innerHTML = '<span class="iconify" data-icon="mdi:content-save-outline"></span> Save Employee';
     resetPhotoUI();
@@ -781,10 +901,15 @@ employeeForm.addEventListener('submit', async e => {
         address:    addressInput.value.trim(),
         dob:        dobInput.value,
         position:   positionInput.value.trim(),
-        department: departmentInput.value.trim(),
+        department_id: departmentSelect.value,
         date_hired: dateHiredInput.value,
         status_id:  Number(statusIdInput.value),
     };
+
+    if (!payload.department_id) {
+        showToast('Error', 'Please select a department.', 'error');
+        return;
+    }
 
     const url    = id ? `/api/employees/${id}` : '/api/employees';
     const method = 'POST'; // Always use POST to support multipart/form-data (required for file uploads in PHP)
@@ -853,7 +978,6 @@ async function confirmDelete() {
 employeeModal.addEventListener('click', e => { if (e.target === employeeModal) closeModal(); });
 deleteModal.addEventListener('click',   e => { if (e.target === deleteModal)   closeDeleteModal(); });
 
-/* ── Events ─────────────────────────────────── */
 employeeTableBody.addEventListener('click', e => {
     const editButton = e.target.closest('.js-edit-employee');
     if (editButton) {
@@ -876,6 +1000,7 @@ positionFilter.addEventListener('change',   () => { currentPage = 1; applyFilter
 statusFilter.addEventListener('change',     () => { currentPage = 1; applyFilters(); });
 
 /* ── Init ────────────────────────────────────── */
+loadDepartments();
 loadEmployees();
 
 const actionFromQuery = new URLSearchParams(window.location.search).get('action');

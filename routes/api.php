@@ -63,6 +63,14 @@ $router->post('/api/employees/{id}', 'ControllerEmployee@update');
 $router->put('/api/employees/{id}',  'ControllerEmployee@update');
 $router->delete('/api/employees/{id}','ControllerEmployee@delete');
 
+/* ================= DEPARTMENT ROUTES ================= */
+$router->get('/api/departments',         'ControllerDepartment@index');
+$router->get('/api/departments/{id}',    'ControllerDepartment@show');
+$router->post('/api/departments',        'ControllerDepartment@store');
+$router->put('/api/departments/{id}',    'ControllerDepartment@update');
+$router->patch('/api/departments/{id}',  'ControllerDepartment@update');
+$router->delete('/api/departments/{id}', 'ControllerDepartment@destroy');
+
 /* ================= LEAVE ROUTES ================= */
 $router->get('/api/leave/list',      'ControllerLeave@index');
 $router->get('/api/leaves',          'ControllerLeave@index');

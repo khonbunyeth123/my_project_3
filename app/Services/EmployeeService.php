@@ -5,12 +5,14 @@ namespace App\Services;
  
 use App\Models\Employee;
 use App\Models\Dashboard;
- 
+use App\Services\DepartmentService;
+
 class EmployeeService
 {
     public function __construct(
         private readonly Employee $employeeModel,
-        private readonly Dashboard $dashboardModel
+        private readonly Dashboard $dashboardModel,
+        private readonly DepartmentService $departmentService
     ) {}
  
     // List all employees
@@ -77,6 +79,12 @@ class EmployeeService
 
     public function getDepartments(): array
     {
+        $departments = $this->departmentService->listNames();
+
+        if (!empty($departments)) {
+            return $departments;
+        }
+
         return $this->employeeModel->getDepartments();
     }
 

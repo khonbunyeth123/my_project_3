@@ -1,9 +1,9 @@
 <div class="w-full h-full"> 
     <div class="p-2 space-y-2">
     <!-- Stats Grid -->
-    <div id="statsGrid" class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2">
+    <div id="statsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         <!-- Loading placeholders -->
-        <?php for($i=0; $i<4; $i++): ?>
+        <?php for($i=0; $i<5; $i++): ?>
         <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 animate-pulse">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-slate-100 rounded-lg"></div>
@@ -429,6 +429,7 @@
                 statsGrid.innerHTML = `
                     ${createStat("mdi:account-multiple", data.total_employees || 0, "Employees", "text-blue-500", "bg-blue-50")}
                     ${createStat("mdi:account-check", data.active_employees || 0, "Active", "text-emerald-500", "bg-emerald-50")}
+                    ${createStat("mdi:office-building", data.total_departments || 0, "Departments", "text-indigo-500", "bg-indigo-50")}
                     ${createStat("mdi:clock-alert", data.pending_leaves || 0, "Pending", "text-amber-500", "bg-amber-50")}
                     ${createStat("mdi:calendar-remove", data.on_leave_today || 0, "On Leave", "text-rose-500", "bg-rose-50")}
                 `;

@@ -93,6 +93,7 @@
         $system_items = [
           ['page'=>'user','label'=>'Users','icon'=>'mdi:account-cog-outline'],
           ['page'=>'roles','label'=>'Roles','icon'=>'mdi:shield-account-outline'],
+          ['page'=>'departments','label'=>'Departments','icon'=>'mdi:office-building-outline'],
           ['page'=>'permissions','label'=>'Permissions','icon'=>'mdi:key-outline'],
         ];
         foreach ($system_items as $item):

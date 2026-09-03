@@ -21,9 +21,11 @@ class Employee
     public function getAll(): array
     {
         $stmt = $this->db->prepare("
-            SELECT " . $this->selectColumns() . " FROM {$this->table}
-            WHERE deleted_at IS NULL
-            ORDER BY id DESC
+            SELECT " . $this->selectColumns() . "
+            FROM {$this->table} e
+            LEFT JOIN tbl_departments d ON e.department_id = d.id AND d.deleted_at IS NULL
+            WHERE e.deleted_at IS NULL
+            ORDER BY e.id DESC
         ");
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -40,8 +42,10 @@ class Employee
     public function getById(int $id): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT " . $this->selectColumns() . " FROM {$this->table}
-            WHERE id = :id AND deleted_at IS NULL
+            SELECT " . $this->selectColumns() . "
+            FROM {$this->table} e
+            LEFT JOIN tbl_departments d ON e.department_id = d.id AND d.deleted_at IS NULL
+            WHERE e.id = :id AND e.deleted_at IS NULL
             LIMIT 1
         ");
         $stmt->execute(['id' => $id]);
@@ -62,7 +66,7 @@ class Employee
     {
         $requiredKeys = [
             'username', 'first_name', 'last_name', 'full_name',
-            'position', 'department', 'date_hired', 'status_id', 'created_at'
+            'position', 'department_id', 'date_hired', 'status_id', 'created_at'
         ];
 
         foreach ($requiredKeys as $key) {
@@ -71,23 +75,21 @@ class Employee
             }
         }
 
-        // Build params WITHOUT uuid — uuid is added below only if the column exists
         $params = [
-            'photo'      => (!empty($data['photo']) && is_string($data['photo'])) ? $data['photo'] : null,
-            'username'   => (string) $data['username'],
-            'first_name' => (string) $data['first_name'],
-            'last_name'  => (string) $data['last_name'],
-            'full_name'  => (string) $data['full_name'],
-            'position'   => (string) $data['position'],
-            'department' => (string) $data['department'],
-            'date_hired' => (string) $data['date_hired'],
-            'status_id'  => (int)    $data['status_id'],
-            'created_at' => (string) $data['created_at'],
-            'created_by' => (array_key_exists('created_by', $data) && (int)$data['created_by'] !== 0 && $data['created_by'] !== null)
-                                ? (int) $data['created_by'] : null,
+            'photo'         => (!empty($data['photo']) && is_string($data['photo'])) ? $data['photo'] : null,
+            'username'      => (string) $data['username'],
+            'first_name'    => (string) $data['first_name'],
+            'last_name'     => (string) $data['last_name'],
+            'full_name'     => (string) $data['full_name'],
+            'position'      => (string) $data['position'],
+            'department_id' => (int) $data['department_id'],
+            'date_hired'    => (string) $data['date_hired'],
+            'status_id'     => (int)    $data['status_id'],
+            'created_at'    => (string) $data['created_at'],
+            'created_by'    => (array_key_exists('created_by', $data) && (int)$data['created_by'] !== 0 && $data['created_by'] !== null)
+                                    ? (int) $data['created_by'] : null,
         ];
 
-        // Only insert uuid if the column actually exists in the table
         if ($this->hasColumn('uuid')) {
             $params['uuid'] = !empty($data['uuid']) ? (string) $data['uuid'] : Uuid::v4();
         }
@@ -138,7 +140,7 @@ class Employee
     {
         $allowedColumns = [
             'photo', 'username', 'first_name', 'last_name', 'full_name',
-            'position', 'department', 'date_hired', 'status_id', 'updated_by'
+            'position', 'department_id', 'date_hired', 'status_id', 'updated_by'
         ];
 
         if ($this->hasColumn('gender'))  $allowedColumns[] = 'gender';
@@ -156,7 +158,7 @@ class Employee
                 continue;
             }
 
-            if ($column === 'status_id') {
+            if ($column === 'status_id' || $column === 'department_id') {
                 $set[] = "{$column} = :{$column}";
                 $params[$column] = (int) $data[$column];
             } elseif ($column === 'updated_by') {
@@ -207,24 +209,15 @@ class Employee
     public function findActiveEmployeeByUuid(string $uuid): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT " . $this->selectColumns() . " FROM {$this->table}
-            WHERE uuid = :uuid AND deleted_at IS NULL
+            SELECT " . $this->selectColumns() . "
+            FROM {$this->table} e
+            LEFT JOIN tbl_departments d ON e.department_id = d.id AND d.deleted_at IS NULL
+            WHERE e.uuid = :uuid AND e.deleted_at IS NULL
             LIMIT 1
         ");
         $stmt->execute(['uuid' => $uuid]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         return $row && $this->hasColumn('uuid') ? $this->ensureUuid($row) : $row;
-    }
-
-    public function getDepartments(): array
-    {
-        $stmt = $this->db->query("
-            SELECT DISTINCT department 
-            FROM {$this->table} 
-            WHERE department IS NOT NULL AND deleted_at IS NULL
-            ORDER BY department ASC
-        ");
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     private function ensureUuid(array $row): array
@@ -247,6 +240,26 @@ class Employee
         return $row;
     }
 
+    public function getDepartments(): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT TRIM(department) AS department
+            FROM {$this->table}
+            WHERE department IS NOT NULL
+              AND TRIM(department) <> ''
+              AND deleted_at IS NULL
+            ORDER BY department ASC
+        ");
+        $stmt->execute();
+
+        $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return array_values(array_filter(array_map(
+            static fn ($department): string => trim((string) $department),
+            $rows
+        ), static fn (string $department): bool => $department !== ''));
+    }
+
     private function hasColumn(string $column): bool
     {
         if ($this->tableColumns === null) {
@@ -266,7 +279,7 @@ class Employee
     {
         $preferredColumns = [
             'id', 'uuid', 'photo', 'username', 'first_name', 'last_name', 'full_name',
-            'gender', 'email', 'phone', 'address', 'dob', 'position', 'department', 'branch',
+            'gender', 'email', 'phone', 'address', 'dob', 'position', 'department_id', 'branch',
             'date_hired', 'status_id', 'created_at', 'created_by', 'updated_at',
             'updated_by', 'deleted_at', 'deleted_by'
         ];
@@ -274,9 +287,14 @@ class Employee
         $columns = [];
         foreach ($preferredColumns as $column) {
             if ($this->hasColumn($column)) {
-                $columns[] = $column;
+                $columns[] = "e.{$column}";
             }
         }
+
+        // Frontend still expects a display string called "department" —
+        // now sourced from the joined tbl_departments row instead of a
+        // free-text column on tbl_employees.
+        $columns[] = 'd.name AS department';
 
         return implode(', ', $columns);
     }
