@@ -33,8 +33,10 @@ class Role
                     COUNT(DISTINCT u.id) as user_count,
                     COUNT(DISTINCT rp.permission_id) as permission_count
                 FROM tbl_roles r
-                LEFT JOIN tbl_users u 
-                    ON r.id = u.role_id AND u.deleted_at IS NULL
+                LEFT JOIN tbl_user_roles ur
+                    ON ur.role_id = r.id
+                LEFT JOIN tbl_users u
+                    ON u.id = ur.user_id AND u.deleted_at IS NULL
                 LEFT JOIN tbl_role_permissions rp 
                     ON r.id = rp.role_id";
 
@@ -66,7 +68,8 @@ class Role
                     r.updated_by,
                     COUNT(DISTINCT u.id) as user_count
                 FROM tbl_roles r
-                LEFT JOIN tbl_users u ON r.id = u.role_id AND u.deleted_at IS NULL
+                LEFT JOIN tbl_user_roles ur ON ur.role_id = r.id
+                LEFT JOIN tbl_users u ON u.id = ur.user_id AND u.deleted_at IS NULL
                 WHERE r.id = ? AND r.deleted_at IS NULL
                 GROUP BY r.id";
         
@@ -105,7 +108,8 @@ class Role
                     r.updated_by,
                     COUNT(DISTINCT u.id) as user_count
                   FROM tbl_roles r
-                  LEFT JOIN tbl_users u ON r.id = u.role_id AND u.deleted_at IS NULL
+                  LEFT JOIN tbl_user_roles ur ON ur.role_id = r.id
+                  LEFT JOIN tbl_users u ON u.id = ur.user_id AND u.deleted_at IS NULL
                   WHERE r.uuid = ? AND r.deleted_at IS NULL
                   GROUP BY r.id";
         

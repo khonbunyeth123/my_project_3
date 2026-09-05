@@ -79,10 +79,10 @@ $activeMenu = "permissions";
         <div>
             <h1 class="text-sm font-bold text-gray-900">Permission Management</h1>
         </div>
-        <button onclick="openAddModal()"
+        <?php if (hasAnyPermissionSlugs(['permission.create', 'permission.add', 'permissions.manage'])): ?><button onclick="openAddModal()"
             class="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 text-[10px]">
             <i class="fas fa-plus"></i> Add
-        </button>
+        </button><?php endif; ?>
     </div>
 
     <!-- Stats -->
@@ -260,6 +260,8 @@ const API_BASE = (function() {
     const match = window.location.pathname.match(/^(.*\/admin)/);
     return match ? match[1] + '/api' : '/api';
 })();
+const canPermissionUpdate = <?= json_encode(hasAnyPermissionSlugs(['permission.update', 'permissions.manage']), JSON_THROW_ON_ERROR) ?>;
+const canPermissionDelete = <?= json_encode(hasAnyPermissionSlugs(['permission.delete', 'permissions.manage']), JSON_THROW_ON_ERROR) ?>;
 
 // ─── STATE ────────────────────────────────────────────────
 let allPermissions = [];
@@ -359,14 +361,14 @@ function renderTable() {
             </td>
             <td class="px-3 py-2 text-center">
                 <div class="flex items-center justify-center gap-1">
-                    <button onclick="openEditModal(${p.id})"
+                    ${canPermissionUpdate ? `<button onclick="openEditModal(${p.id})"
                         class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-indigo-600 hover:text-white text-[10px] font-bold transition-all">
                         <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button onclick="openDeleteModal(${p.id}, '${escHtml(slug)}')"
+                    </button>` : ''}
+                    ${canPermissionDelete ? `<button onclick="openDeleteModal(${p.id}, '${escHtml(slug)}')"
                         class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-rose-600 hover:text-white text-[10px] font-bold transition-all">
                         <i class="fas fa-trash"></i> Delete
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
         </tr>`;

@@ -15,13 +15,15 @@ class FormPermissionHelper
         }
 
         $db = Database::getInstance()->getConnection();
-        
+
         $query = "
-            SELECT COUNT(*) as count
-            FROM tbl_role_permissions rp
+            SELECT COUNT(DISTINCT p.id) as count
+            FROM tbl_user_roles ur
+            JOIN tbl_role_permissions rp ON rp.role_id = ur.role_id
             JOIN tbl_permissions p ON rp.permission_id = p.id
-            JOIN tbl_users u ON u.role_id = rp.role_id
+            JOIN tbl_users u ON u.id = ur.user_id
             WHERE u.id = ?
+            AND u.deleted_at IS NULL
             AND p.module = ?
             AND p.action = ?
             AND p.status_id = 1
@@ -41,13 +43,15 @@ class FormPermissionHelper
 
         $roles = is_array($roles) ? $roles : [$roles];
         $db = Database::getInstance()->getConnection();
-        
+
         $placeholders = implode(',', array_fill(0, count($roles), '?'));
         $query = "
-            SELECT COUNT(*) as count
+            SELECT COUNT(DISTINCT r.id) as count
             FROM tbl_users u
-            JOIN tbl_roles r ON u.role_id = r.id
+            JOIN tbl_user_roles ur ON ur.user_id = u.id
+            JOIN tbl_roles r ON ur.role_id = r.id
             WHERE u.id = ? AND r.name IN ($placeholders)
+            AND u.deleted_at IS NULL
         ";
         
         $params = array_merge([$userId], $roles);

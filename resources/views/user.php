@@ -4,10 +4,10 @@
         <div>
             <h1 class="text-sm font-bold text-gray-900">User Management</h1>
         </div>
-        <button onclick="openCreateModal()"
+        <?php if (hasAnyPermissionSlugs(['user.create', 'users.create'])): ?><button onclick="openCreateModal()"
             class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 text-[10px]">
             <i class="fas fa-plus"></i> Add User
-        </button>
+        </button><?php endif; ?>
     </div>
 
     <!-- Stats -->
@@ -361,6 +361,8 @@ const API_BASE = (function() {
     const match = window.location.pathname.match(/^(.*\/admin)/);
     return match ? match[1] + '/api' : '/api';
 })();
+const canUserUpdate = <?= json_encode(hasAnyPermissionSlugs(['user.update', 'users.update']), JSON_THROW_ON_ERROR) ?>;
+const canUserDelete = <?= json_encode(hasAnyPermissionSlugs(['user.delete', 'users.delete']), JSON_THROW_ON_ERROR) ?>;
 
 let allUsers = [];
 let allRoles = [];
@@ -484,14 +486,14 @@ function renderTable(users) {
             <td class="px-3 py-2 text-gray-400 text-[9px]">${formatDate(user.created_at)}</td>
             <td class="px-3 py-2 text-center">
                 <div class="flex items-center justify-center gap-1">
-                    <button onclick="openEditModal(${user.id})"
+                    ${canUserUpdate ? `<button onclick="openEditModal(${user.id})"
                         class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-indigo-600 hover:text-white text-[10px] font-bold transition-all">
                         <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button onclick="openDeleteModal(${user.id}, '${escHtml(user.full_name)}')"
+                    </button>` : ''}
+                    ${canUserDelete ? `<button onclick="openDeleteModal(${user.id}, '${escHtml(user.full_name)}')"
                         class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-rose-600 hover:text-white text-[10px] font-bold transition-all">
                         <i class="fas fa-trash"></i> Delete
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
         </tr>`;

@@ -18,9 +18,24 @@ class User
     // Get user by ID
     public function getById(int $id)
     {
-        $stmt = $this->pdo->prepare("\n            SELECT u.id, u.uuid, u.username, u.full_name, u.email, u.role_id, u.status_id, u.created_at, r.name as role_name
+        $stmt = $this->pdo->prepare("
+            SELECT
+                u.id,
+                u.uuid,
+                u.username,
+                u.full_name,
+                u.email,
+                ur.role_id,
+                u.status_id,
+                u.created_at,
+                r.name AS role_name
             FROM tbl_users u
-            LEFT JOIN tbl_roles r ON u.role_id = r.id
+            LEFT JOIN (
+                SELECT user_id, MIN(role_id) AS role_id
+                FROM tbl_user_roles
+                GROUP BY user_id
+            ) ur ON ur.user_id = u.id
+            LEFT JOIN tbl_roles r ON ur.role_id = r.id
             WHERE u.id = ? AND u.deleted_at IS NULL
             LIMIT 1
         ");
@@ -43,7 +58,10 @@ class User
         $orderBy = "ORDER BY u.created_at DESC";
         if (!empty($sorts['property']) && in_array($sorts['property'], ['id','username','full_name','email','role_id','status_id','created_at'])) {
             $dir = strtoupper($sorts['direction'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
-            $orderBy = "ORDER BY u.{$sorts['property']} $dir";
+            $orderColumn = $sorts['property'] === 'role_id'
+                ? 'COALESCE(ur.role_id, 0)'
+                : "u.{$sorts['property']}";
+            $orderBy = "ORDER BY {$orderColumn} $dir";
         }
 
         // Total count
@@ -52,9 +70,24 @@ class User
         $total = $countStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
         // Data
-        $stmt = $this->pdo->prepare("\n            SELECT u.id, u.uuid, u.username, u.full_name, u.email, u.role_id, u.status_id, u.created_at, r.name as role_name
+        $stmt = $this->pdo->prepare("
+            SELECT
+                u.id,
+                u.uuid,
+                u.username,
+                u.full_name,
+                u.email,
+                ur.role_id,
+                u.status_id,
+                u.created_at,
+                r.name AS role_name
             FROM tbl_users u
-            LEFT JOIN tbl_roles r ON u.role_id = r.id
+            LEFT JOIN (
+                SELECT user_id, MIN(role_id) AS role_id
+                FROM tbl_user_roles
+                GROUP BY user_id
+            ) ur ON ur.user_id = u.id
+            LEFT JOIN tbl_roles r ON ur.role_id = r.id
             $where
             $orderBy
             LIMIT ?, ?
@@ -81,8 +114,11 @@ class User
 
             error_log("User Model - Creating user with username: " . $data['username']);
 
-            $stmt = $this->pdo->prepare("\n                INSERT INTO tbl_users (uuid, username, full_name, email, password, role_id, status_id, created_at, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare("
+                INSERT INTO tbl_users (uuid, username, full_name, email, password, status_id, created_at, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
             ");
 
             $result = $stmt->execute([
@@ -91,7 +127,6 @@ class User
                 $data['full_name'],
                 $data['email'],
                 password_hash($data['password'], PASSWORD_BCRYPT),
-                $data['role_id'],
                 $data['status_id'] ?? 1,
                 $data['created_by'] ?? null
             ]);
@@ -101,11 +136,19 @@ class User
                 throw new \Exception("Failed to insert user: " . $stmt->errorInfo()[2]);
             }
 
-            error_log("User Model - User created with ID: " . $this->pdo->lastInsertId());
+            $userId = (int) $this->pdo->lastInsertId();
+            $this->syncUserRole($userId, (int) $data['role_id']);
 
-            return $this->getById((int) $this->pdo->lastInsertId());
+            $this->pdo->commit();
+
+            error_log("User Model - User created with ID: " . $userId);
+
+            return $this->getById($userId);
 
         } catch (\Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             error_log("User Model - Create exception: " . $e->getMessage());
             throw $e;
         }
@@ -117,7 +160,7 @@ class User
         $updates = [];
         $params = [];
 
-        foreach (['full_name','email','role_id','status_id'] as $field) {
+        foreach (['full_name', 'email', 'status_id'] as $field) {
             if (isset($data[$field])) {
                 $updates[] = "$field = ?";
                 $params[] = $data[$field];
@@ -129,20 +172,40 @@ class User
             $params[] = password_hash($data['password'], PASSWORD_BCRYPT);
         }
 
-        if (empty($updates)) return $this->getById($id);
+        $roleIdProvided = array_key_exists('role_id', $data) && $data['role_id'] !== null && $data['role_id'] !== '';
 
-        $updates[] = "updated_at = NOW()";
-        if (isset($data['updated_by'])) {
-            $updates[] = "updated_by = ?";
-            $params[] = $data['updated_by'];
+        if (empty($updates) && !$roleIdProvided) {
+            return $this->getById($id);
         }
 
-        $params[] = $id;
-        $sql = "UPDATE tbl_users SET " . implode(', ', $updates) . " WHERE id = ? AND deleted_at IS NULL";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
+        $this->pdo->beginTransaction();
 
-        return $this->getById($id);
+        try {
+            if (!empty($updates)) {
+                $updates[] = "updated_at = NOW()";
+                if (isset($data['updated_by'])) {
+                    $updates[] = "updated_by = ?";
+                    $params[] = $data['updated_by'];
+                }
+
+                $params[] = $id;
+                $sql = "UPDATE tbl_users SET " . implode(', ', $updates) . " WHERE id = ? AND deleted_at IS NULL";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute($params);
+            }
+
+            if ($roleIdProvided) {
+                $this->syncUserRole($id, (int) $data['role_id']);
+            }
+
+            $this->pdo->commit();
+            return $this->getById($id);
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     // Soft delete user
@@ -156,14 +219,31 @@ class User
     // Get permissions for a user
     public function getPermissions(int $userId)
     {
-        $stmt = $this->pdo->prepare("\n            SELECT p.module, p.action
-            FROM tbl_role_permissions rp
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT p.module, p.action
+            FROM tbl_user_roles ur
+            JOIN tbl_role_permissions rp ON ur.role_id = rp.role_id
             JOIN tbl_permissions p ON rp.permission_id = p.id
-            JOIN tbl_users u ON u.role_id = rp.role_id
-            WHERE u.id = ? AND p.status_id = 1
+            WHERE ur.user_id = ? AND p.status_id = 1
+              AND p.deleted_at IS NULL
         ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function syncUserRole(int $userId, int $roleId): void
+    {
+        if ($userId <= 0 || $roleId <= 0) {
+            throw new \InvalidArgumentException('A valid user and role are required.');
+        }
+
+        $deleteStmt = $this->pdo->prepare('DELETE FROM tbl_user_roles WHERE user_id = ?');
+        $deleteStmt->execute([$userId]);
+
+        $insertStmt = $this->pdo->prepare(
+            'INSERT INTO tbl_user_roles (user_id, role_id, created_at) VALUES (?, ?, NOW())'
+        );
+        $insertStmt->execute([$userId, $roleId]);
     }
 
 }

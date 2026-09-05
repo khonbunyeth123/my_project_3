@@ -9,8 +9,10 @@
             <div class="flex items-center gap-2">
                 <span class="text-[10px] font-bold normal-case tracking-wider bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md" id="totalCount">0 Staff</span>
                 <?php 
-                    $label = 'Add Employee'; $type = 'primary'; $size = 'xs'; $icon = 'mdi:plus-circle'; $attr = 'onclick="openCreateModal()"'; $id = null;
-                    include 'component/button.php'; 
+                    if (hasAnyPermissionSlugs(['employee.create', 'employees.create'])) {
+                        $label = 'Add Employee'; $type = 'primary'; $size = 'xs'; $icon = 'mdi:plus-circle'; $attr = 'onclick="openCreateModal()"'; $id = null;
+                        include 'component/button.php';
+                    }
                     $label = null; $attr = null; $icon = null; // Important: Reset
                 ?>
             </div>
@@ -311,6 +313,11 @@
 
 <script src="/assets/js/pagination.js"></script>
 <script>
+const employeePermissions = <?= json_encode([
+    'create' => hasAnyPermissionSlugs(['employee.create', 'employees.create']),
+    'update' => hasAnyPermissionSlugs(['employee.update', 'employees.update']),
+    'delete' => hasAnyPermissionSlugs(['employee.delete', 'employees.delete']),
+], JSON_THROW_ON_ERROR) ?>;
 /* ── DOM References ─────────────────────────── */
 const employeeForm     = document.getElementById('employeeForm');
 const employeeIdInput  = document.getElementById('employeeId');
@@ -683,12 +690,12 @@ function renderTable(data) {
             <td class="px-3 py-1.5">${statusBadge(e.status_id)}</td>
             <td class="px-3 py-1.5">
                 <div class="flex gap-1 justify-center">
-                    <button type="button" class="js-edit-employee inline-flex items-center gap-0.5 px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 text-[9px] font-bold normal-case tracking-wider transition-all shadow-sm active:scale-95" data-id="${encodeDataAttr(e.id)}">
+                    ${employeePermissions.update ? `<button type="button" class="js-edit-employee inline-flex items-center gap-0.5 px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 text-[9px] font-bold normal-case tracking-wider transition-all shadow-sm active:scale-95" data-id="${encodeDataAttr(e.id)}">
                         <span class="iconify" data-icon="mdi:pencil"></span> Edit
-                    </button>
-                    <button type="button" class="js-delete-employee inline-flex items-center gap-0.5 px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-[9px] font-bold normal-case tracking-wider transition-all shadow-sm active:scale-95" data-id="${encodeDataAttr(e.id)}" data-name="${encodeDataAttr(e.full_name || '')}">
+                    </button>` : ''}
+                    ${employeePermissions.delete ? `<button type="button" class="js-delete-employee inline-flex items-center gap-0.5 px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-[9px] font-bold normal-case tracking-wider transition-all shadow-sm active:scale-95" data-id="${encodeDataAttr(e.id)}" data-name="${encodeDataAttr(e.full_name || '')}">
                         <span class="iconify" data-icon="mdi:trash-can-outline"></span> Del
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
         </tr>`;

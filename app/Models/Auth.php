@@ -30,11 +30,16 @@ class Auth
                 u.password,
                 u.full_name,
                 u.email,
-                u.role_id,
+                ur.role_id,
                 u.status_id,
                 r.name AS role_name
             FROM tbl_users u
-            LEFT JOIN tbl_roles r ON u.role_id = r.id
+            LEFT JOIN (
+                SELECT user_id, MIN(role_id) AS role_id
+                FROM tbl_user_roles
+                GROUP BY user_id
+            ) ur ON ur.user_id = u.id
+            LEFT JOIN tbl_roles r ON ur.role_id = r.id
             WHERE (u.username = :username_identifier OR u.email = :email_identifier)
               AND u.status_id = 1
               AND u.deleted_at IS NULL
@@ -271,11 +276,16 @@ class Auth
                 u.username,
                 u.full_name,
                 u.email,
-                u.role_id,
+                ur.role_id,
                 u.status_id,
                 r.name AS role_name
             FROM tbl_users u
-            LEFT JOIN tbl_roles r ON r.id = u.role_id
+            LEFT JOIN (
+                SELECT user_id, MIN(role_id) AS role_id
+                FROM tbl_user_roles
+                GROUP BY user_id
+            ) ur ON ur.user_id = u.id
+            LEFT JOIN tbl_roles r ON r.id = ur.role_id
             WHERE u.id        = :id
               AND u.status_id = 1
               AND u.deleted_at IS NULL

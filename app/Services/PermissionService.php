@@ -387,11 +387,12 @@ class PermissionService
                 return false;
             }
 
-            $query = "SELECT COUNT(*) as count FROM {$this->table} p
+            $query = "SELECT COUNT(DISTINCT p.id) as count FROM {$this->table} p
                       INNER JOIN {$this->rolePermissionTable} rp ON p.id = rp.permission_id
-                      INNER JOIN tbl_roles r ON rp.role_id = r.id
-                      INNER JOIN tbl_users u ON u.role_id = r.id
-                      WHERE u.id = :user_id AND p.module = :module AND p.action = :action
+                      INNER JOIN tbl_user_roles ur ON ur.role_id = rp.role_id
+                      INNER JOIN tbl_users u ON u.id = ur.user_id
+                      WHERE u.id = :user_id AND u.deleted_at IS NULL
+                        AND p.module = :module AND p.action = :action
                         AND p.deleted_at IS NULL";
 
             $stmt = $this->db->getConnection()->prepare($query);

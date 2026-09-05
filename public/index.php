@@ -108,7 +108,7 @@ $pagePermissions = [
     'report/report_top_employee'  => ['report.view_top',     'report.view'],
     'user'                        => ['user.view',       'users.view'],
     'roles'                       => ['role.view',       'roles.view'],
-    'departments'                 => ['roles.manage'],
+    'departments'                 => ['department.view', 'departments.view', 'roles.manage'],
     'permissions'                 => ['permission.view', 'permissions.view'],
     'audits'                      => ['audits.view',     'audit.view'],
 ];

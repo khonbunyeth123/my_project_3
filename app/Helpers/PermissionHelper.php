@@ -22,10 +22,11 @@ if (!function_exists('loadSessionPermissions')) {
         try {
             $pdo = \App\Core\Database::getInstance()->getConnection();
             $stmt = $pdo->prepare(
-                "SELECT CONCAT(p.module, '.', p.action) AS permission_slug
-                 FROM tbl_role_permissions rp
+                "SELECT DISTINCT CONCAT(p.module, '.', p.action) AS permission_slug
+                 FROM tbl_user_roles ur
+                 INNER JOIN tbl_role_permissions rp ON rp.role_id = ur.role_id
                  INNER JOIN tbl_permissions p ON p.id = rp.permission_id
-                 INNER JOIN tbl_users u ON u.role_id = rp.role_id
+                 INNER JOIN tbl_users u ON u.id = ur.user_id
                  WHERE u.id = :user_id
                    AND u.deleted_at IS NULL
                    AND p.status_id = 1

@@ -9,6 +9,12 @@ $currentRoleId = (int) ($_SESSION['role_id'] ?? 0);
 <script>window.__calendarInitialDate = <?= json_encode($today) ?>;</script>
 <script>window.__calendarUserRole = <?= json_encode($currentRole) ?>;</script>
 <script>window.__calendarUserRoleId = <?= json_encode($currentRoleId) ?>;</script>
+<script>window.__calendarPermissions = <?= json_encode([
+    'view' => hasAnyPermissionSlugs(['calendar.view', 'calendar.manage']),
+    'manage' => hasPermissionSlug('calendar.manage'),
+    'approveLeave' => hasAnyPermissionSlugs(['leave.approve', 'leave.update', 'leave.view', 'calendar.manage']),
+    'rejectLeave' => hasAnyPermissionSlugs(['leave.reject', 'leave.update', 'leave.view', 'calendar.manage']),
+], JSON_THROW_ON_ERROR) ?>;</script>
 
 <style>
 /* ── Toast ── */
@@ -163,12 +169,14 @@ $currentRoleId = (int) ($_SESSION['role_id'] ?? 0);
                         include 'component/button.php';
                     ?>
                     <?php
-                        $label = '+ New';
-                        $id = 'openCreateEvent';
-                        $size = 'xs';
-                        $type = 'primary';
-                        $class = '';
-                        include 'component/button.php';
+                        if (hasPermissionSlug('calendar.manage')) {
+                            $label = '+ New';
+                            $id = 'openCreateEvent';
+                            $size = 'xs';
+                            $type = 'primary';
+                            $class = '';
+                            include 'component/button.php';
+                        }
                     ?>
                 </div>
             </div>
@@ -674,10 +682,10 @@ $currentRoleId = (int) ($_SESSION['role_id'] ?? 0);
         return currentUserRole() === 'admin' || Number(window.__calendarUserRoleId || 0) === 1;
     }
     function canManageLeaves() {
-        return isAdmin() || currentUserRole() === 'manager';
+        return Boolean(window.__calendarPermissions?.approveLeave || window.__calendarPermissions?.rejectLeave);
     }
     function canManageEvents() {
-        return isAdmin();
+        return Boolean(window.__calendarPermissions?.manage);
     }
     function isCompletedEvent(ev) {
         if (!ev || !ev.end) return false;
@@ -843,7 +851,7 @@ $currentRoleId = (int) ($_SESSION['role_id'] ?? 0);
             const key = localDateKey(cellDate);
             const items = groups[key] || [];
             const isToday = key === todayKey;
-            html += `<div class="min-h-[80px] bg-white p-2 transition hover:bg-slate-50 ${inMonth?'':'opacity-40'}" onclick="${inMonth ? `openEventModal(null, '${key}')` : ''}">
+            html += `<div class="min-h-[80px] bg-white p-2 transition hover:bg-slate-50 ${inMonth?'':'opacity-40'}" onclick="${inMonth ? `openEventModal(null, '${key}', !window.__calendarPermissions?.manage)` : ''}">
                 <div class="mb-1 flex items-center justify-between">
                     <span class="inline-flex h-7 w-7 items-center justify-center rounded-xl text-sm font-black ${isToday?'bg-slate-950 text-white':'text-slate-700'}">${inMonth?dayNum:''}</span>
                     ${items.length>0&&inMonth?`<span class="text-[10px] font-bold text-slate-400">${items.length}</span>`:''}
@@ -1115,7 +1123,7 @@ $currentRoleId = (int) ($_SESSION['role_id'] ?? 0);
             const start = startDate ? new Date(`${startDate}T09:00:00`) : new Date(state.current);
             els.evStartAt.value = toDatetimeLocal(start);
             els.evEndAt.value   = toDatetimeLocal(new Date(start.getTime() + 60 * 60 * 1000));
-            setModalReadOnly(false);
+            setModalReadOnly(readOnly || !canManageEvents());
         }
         // clear field errors
         els.form.querySelectorAll('.field-error').forEach(e => e.classList.add('hidden'));

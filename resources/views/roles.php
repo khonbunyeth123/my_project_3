@@ -84,10 +84,10 @@ $activeMenu = "roles";
         <div>
             <h1 class="text-sm font-bold text-gray-900">Role Management</h1>
         </div>
-        <button onclick="openAddRoleModal()"
+        <?php if (hasAnyPermissionSlugs(['role.create', 'roles.manage'])): ?><button onclick="openAddRoleModal()"
             class="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 text-[10px]">
             <i class="fas fa-plus"></i> Add Role
-        </button>
+        </button><?php endif; ?>
     </div>
 
     <!-- Stats -->
@@ -331,6 +331,8 @@ const API_BASE = (function() {
     const match = window.location.pathname.match(/^(.*\/admin)/);
     return match ? match[1] + '/api' : '/api';
 })();
+const canRoleUpdate = <?= json_encode(hasAnyPermissionSlugs(['role.update', 'roles.manage']), JSON_THROW_ON_ERROR) ?>;
+const canRoleDelete = <?= json_encode(hasAnyPermissionSlugs(['role.delete', 'roles.manage']), JSON_THROW_ON_ERROR) ?>;
 
 // ─── STATE ────────────────────────────────────────────────
 let allRoles       = [];   // roles list from GET /api/roles (includes permission_count)
@@ -437,23 +439,22 @@ function renderTable() {
                 </td>
                 <td class="px-3 py-2 text-center">
                     <div class="flex items-center justify-center gap-1 flex-wrap">
-                        ${role.status === 'pending' ? `
-                        <button onclick="openAcceptModal(${role.id}, '${escHtml(role.name)}')"
+                        ${role.status === 'pending' && canRoleUpdate ? `<button onclick="openAcceptModal(${role.id}, '${escHtml(role.name)}')"
                             class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-[10px] font-bold transition-all shadow-sm">
                             <i class="fas fa-check"></i> Accept
                         </button>` : ''}
-                        <button onclick="openEditRoleModal(${role.id})"
+                        ${canRoleUpdate ? `<button onclick="openEditRoleModal(${role.id})"
                             class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-blue-600 hover:text-white text-[10px] font-bold transition-all border border-slate-200">
                             <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button onclick="openPermissionsModal(${role.id}, '${escHtml(role.name)}')"
+                        </button>` : ''}
+                        ${canRoleUpdate ? `<button onclick="openPermissionsModal(${role.id}, '${escHtml(role.name)}')"
                             class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-600 hover:text-white text-[10px] font-bold transition-all border border-indigo-100">
                             <i class="fas fa-key"></i> Perms
-                        </button>
-                        <button onclick="openDeleteModal(${role.id}, '${escHtml(role.name)}')"
+                        </button>` : ''}
+                        ${canRoleDelete ? `<button onclick="openDeleteModal(${role.id}, '${escHtml(role.name)}')"
                             class="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 rounded-md hover:bg-rose-600 hover:text-white text-[10px] font-bold transition-all border border-slate-200">
                             <i class="fas fa-trash"></i> Delete
-                        </button>
+                        </button>` : ''}
                     </div>
                 </td>
             </tr>`;

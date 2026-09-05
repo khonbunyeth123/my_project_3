@@ -37,11 +37,17 @@ try {
     // Get database connection
     $db = \App\Core\Database::getInstance();
 
-    // Query user by email (include role name for RBAC)
-    $query = "SELECT u.id, u.uuid, u.username, u.full_name, u.email, u.password, u.role_id, u.status_id, r.name AS role_name
+    // Query user by email (resolve role through tbl_user_roles)
+    $query = "SELECT u.id, u.uuid, u.username, u.full_name, u.email, u.password, ur.role_id, u.status_id, r.name AS role_name
               FROM tbl_users u
-              LEFT JOIN tbl_roles r ON r.id = u.role_id
+              LEFT JOIN (
+                  SELECT user_id, MIN(role_id) AS role_id
+                  FROM tbl_user_roles
+                  GROUP BY user_id
+              ) ur ON ur.user_id = u.id
+              LEFT JOIN tbl_roles r ON r.id = ur.role_id
               WHERE u.email = ?
+                AND u.deleted_at IS NULL
               LIMIT 1";
     $result = $db->query($query, [$email]);
 
@@ -77,13 +83,14 @@ try {
     $_SESSION['employee_id'] = null;
 
     // Load permission slugs into session cache (module.action)
-    $permQuery = "SELECT CONCAT(p.module, '.', p.action) AS permission_slug
-                  FROM tbl_role_permissions rp
+    $permQuery = "SELECT DISTINCT CONCAT(p.module, '.', p.action) AS permission_slug
+                  FROM tbl_user_roles ur
+                  INNER JOIN tbl_role_permissions rp ON rp.role_id = ur.role_id
                   INNER JOIN tbl_permissions p ON p.id = rp.permission_id
-                  WHERE rp.role_id = ?
+                  WHERE ur.user_id = ?
                     AND p.status_id = 1
                     AND p.deleted_at IS NULL";
-    $permRows = $db->query($permQuery, [(int)$user['role_id']]);
+    $permRows = $db->query($permQuery, [(int)$user['id']]);
 
     $permissions = array_map(
         static fn(array $row): string => strtolower((string)$row['permission_slug']),
@@ -114,3 +121,4 @@ try {
     jsonResponse(false, 'An error occurred during login', [], 500);
 }
 ?>
+ Mm.

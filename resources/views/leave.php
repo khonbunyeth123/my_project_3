@@ -337,22 +337,22 @@
                     <td class="px-3 py-2">${getStatusBadge(rec.status_id)}</td>
                     <td class="px-3 py-2"><span class="text-[9px] font-black text-slate-400 normal-case tracking-tight">${new Date(rec.created_at).toLocaleDateString(undefined, {month:'short',day:'numeric'})}</span></td>
                     <td class="px-3 py-2 text-right">
-                    ${rec.status_id == 0 ? `
+                    ${rec.status_id == 0 && (window.leavePermissions.approve || window.leavePermissions.reject) ? `
                             <div class="flex items-center justify-end gap-1">
-                                <button
+                                ${window.leavePermissions.approve ? `<button
                                     onclick="approveLeave('${rec.uuid}')"
                                     class="inline-flex items-center gap-0.5 rounded-lg bg-white border border-emerald-200 px-2 py-1 text-[9px] font-black text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm active:scale-95"
                                     title="Approve"
                                 >
                                     Approve
-                                </button>
-                                <button
+                                </button>` : ''}
+                                ${window.leavePermissions.reject ? `<button
                                     onclick="rejectLeave('${rec.uuid}')"
                                     class="inline-flex items-center gap-0.5 rounded-lg bg-white border border-rose-200 px-2 py-1 text-[9px] font-black text-rose-600 hover:bg-rose-50 transition-all shadow-sm active:scale-95"
                                     title="Reject"
                                 >
                                     Reject
-                                </button>
+                                </button>` : ''}
                             </div>
                         ` : `
                             <span class="text-[10px] font-bold text-slate-300">—</span>
@@ -363,11 +363,18 @@
         }
 
         // Approve / Reject leave
+        window.leavePermissions = <?= json_encode([
+            'approve' => hasAnyPermissionSlugs(['leave.approve', 'leave.update', 'leave.view']),
+            'reject' => hasAnyPermissionSlugs(['leave.reject', 'leave.update', 'leave.view']),
+        ], JSON_THROW_ON_ERROR) ?>;
+
         function approveLeave(uuid) {
+            if (!window.leavePermissions.approve) return;
             openLeaveDecisionModal('approve', uuid);
         }
 
         function rejectLeave(uuid) {
+            if (!window.leavePermissions.reject) return;
             openLeaveDecisionModal('reject', uuid);
         }
 

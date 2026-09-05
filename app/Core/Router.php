@@ -153,6 +153,9 @@ class Router
             if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
                 $response->send();
             }
+        } catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e) {
+            error_log("Route authorization error: " . $e->getMessage());
+            $this->sendJson(['success' => false, 'message' => 'Forbidden. You do not have permission for this action.'], 403);
         } catch (\Exception $e) {
             error_log("Route execution error: " . $e->getMessage());
             $this->sendJson(['success' => false, 'message' => 'Error processing request: ' . $e->getMessage()], 500);
@@ -228,7 +231,6 @@ class Router
             '/api/auth/reset-password',
             '/api/attendance/qr',
             '/api/attendance/checkin',
-            '/api/employees',
         ];
 
         return in_array($this->route, $publicRoutes, true);
@@ -516,7 +518,8 @@ class Router
             'ControllerDashboard'  => ['dashboard.view'],
             'ControllerAttendance' => $this->permissionsForAttendanceAction($action),
             'ControllerAttendanceLocation' => $this->permissionsForAttendanceLocationAction($action),
-            'ControllerEmployee'   => $this->permissionsForEmployeeAction($action),
+            'ControllerEmployee' => $this->permissionsForEmployeeAction($action),
+            'ControllerDepartment' => $this->permissionsForDepartmentAction($action),
             'ControllerLeave'      => $this->permissionsForLeaveAction($action),
             'ControllerCalendar'   => $this->permissionsForCalendarAction($action),
             'ControllerReport'     => $this->permissionsForReportAction($action),
@@ -538,6 +541,14 @@ class Router
             $this->route === '/api/attendance/checkin'                        => null,
             $this->route === '/api/auth/employee/me'                           => 'employee',
             $this->route === '/api/leave/create'                               => 'employee',
+            in_array($this->route, [
+                '/api/leave/request',
+                '/api/leave/employee/create',
+                '/api/employee/leave/create',
+                '/api/employee/leave/request',
+                '/api/auth/employee/leave/create',
+                '/api/leaves',
+            ], true)                                                            => 'employee',
             $this->route === '/api/attendance/history'                         => 'employee',
             $this->route === '/api/leave/history'                              => 'employee',
             $this->route === '/api/employee/calendar-events'                  => 'employee',
@@ -581,7 +592,7 @@ class Router
     private function permissionsForAttendanceLocationAction(string $action): array
     {
         return match ($action) {
-            'index', 'show'               => [],
+            'index', 'show'               => ['attendance.view', 'attendance.manage_location'],
             'store', 'update', 'destroy'  => ['attendance.manage_location'],
             default                       => ['attendance.manage_location'],
         };
@@ -598,11 +609,28 @@ class Router
         };
     }
 
+    private function permissionsForDepartmentAction(string $action): array
+    {
+        return match ($action) {
+            'index', 'show' => ['department.view', 'departments.view', 'roles.manage'],
+            'store'        => ['department.create', 'departments.manage', 'roles.manage'],
+            'update'       => ['department.update', 'departments.manage', 'roles.manage'],
+            'destroy'      => ['department.delete', 'departments.manage', 'roles.manage'],
+            default        => ['department.view', 'departments.view', 'roles.manage'],
+        };
+    }
+
     private function permissionsForLeaveAction(string $action): array
     {
         return match ($action) {
-            'approve', 'reject' => ['leave.update', 'leave.approve', 'leave.reject'],
-            default             => [],
+            'index'            => ['leave.view'],
+            'create'           => ['leave.create', 'leave.view'],
+            'approve'          => ['leave.approve', 'leave.update', 'leave.view'],
+            'reject'           => ['leave.reject', 'leave.update', 'leave.view'],
+            'reopen'           => ['leave.reopen', 'leave.update', 'leave.view'],
+            'cancelApproval'   => ['leave.cancel_approval', 'leave.approve', 'leave.update', 'leave.view'],
+            'history'          => [],
+            default            => ['leave.view'],
         };
     }
 

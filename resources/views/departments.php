@@ -54,8 +54,10 @@ $activeMenu = "departments";
             <div class="flex items-center gap-2">
                 <span class="text-[10px] font-bold normal-case tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md" id="departmentCount">0 Departments</span>
                 <?php
-                    $label = 'Add Department'; $type = 'success'; $size = 'xs'; $icon = 'mdi:plus'; $attr = 'onclick="openAddModal()"'; $id = null;
-                    include 'component/button.php';
+                    if (hasAnyPermissionSlugs(['department.create', 'departments.manage', 'roles.manage'])) {
+                        $label = 'Add Department'; $type = 'success'; $size = 'xs'; $icon = 'mdi:plus'; $attr = 'onclick="openAddModal()"'; $id = null;
+                        include 'component/button.php';
+                    }
                     $label = null; $attr = null; $icon = null;
                 ?>
             </div>
@@ -151,8 +153,10 @@ $activeMenu = "departments";
                     <?php
                         $label = 'Cancel'; $type = 'secondary'; $size = 'sm'; $attr = 'type="button" onclick="closeDepartmentModal()"';
                         include 'component/button.php';
-                        $label = 'Save Department'; $type = 'success'; $size = 'sm'; $icon = 'mdi:content-save-outline'; $attr = 'type="submit"'; $id = 'saveDepartmentBtn';
-                        include 'component/button.php';
+                        if (hasAnyPermissionSlugs(['department.create', 'department.update', 'departments.manage', 'roles.manage'])) {
+                            $label = 'Save Department'; $type = 'success'; $size = 'sm'; $icon = 'mdi:content-save-outline'; $attr = 'type="submit"'; $id = 'saveDepartmentBtn';
+                            include 'component/button.php';
+                        }
                         $label = null; $attr = null; $icon = null; $id = null;
                     ?>
                 </div>
@@ -195,8 +199,10 @@ $activeMenu = "departments";
                 <?php
                     $label = 'Cancel'; $type = 'secondary'; $size = 'sm'; $attr = 'type="button" onclick="closeDeleteModal()"';
                     include 'component/button.php';
-                    $label = 'Delete'; $type = 'danger'; $size = 'sm'; $icon = 'mdi:delete-outline'; $attr = 'type="button" onclick="confirmDelete()"';
-                    include 'component/button.php';
+                    if (hasAnyPermissionSlugs(['department.delete', 'departments.manage', 'roles.manage'])) {
+                        $label = 'Delete'; $type = 'danger'; $size = 'sm'; $icon = 'mdi:delete-outline'; $attr = 'type="button" onclick="confirmDelete()"';
+                        include 'component/button.php';
+                    }
                     $label = null; $attr = null; $icon = null;
                 ?>
             </div>

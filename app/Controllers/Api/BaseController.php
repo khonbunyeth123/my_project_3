@@ -49,8 +49,20 @@ abstract class BaseController
      */
     protected function denyAccessUnlessGranted(string $attribute, mixed $subject = null): void
     {
-        // For now, we rely on the Router's authorizeRoute which already runs.
-        // But if we want real Voters, we'd trigger them here.
-        // To keep it simple for the refactor, we assume the router handles basic roles.
+        require_once __DIR__ . '/../../Helpers/PermissionHelper.php';
+
+        $permissions = match ($attribute) {
+            'LEAVE_STORE'   => ['leave.create', 'leave.view'],
+            'LEAVE_APPROVE' => ['leave.approve', 'leave.update', 'leave.view'],
+            'LEAVE_REJECT'  => ['leave.reject', 'leave.update', 'leave.view'],
+            'LEAVE_DESTROY' => ['leave.delete', 'leave.update', 'leave.view'],
+            default         => [],
+        };
+
+        if ($permissions !== [] && !hasAnyPermissionSlugs($permissions)) {
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException(
+                'You do not have permission to perform this action.'
+            );
+        }
     }
 }

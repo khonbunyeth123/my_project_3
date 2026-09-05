@@ -47,10 +47,12 @@
             ?>
                 <div class="flex gap-2">
                     <?php 
-                        $label = 'Run Payroll'; $type = 'primary'; $size = 'xs'; $icon = 'mdi:play-circle-outline'; $attr = 'onclick="openGenerateModal()"';
-                        include 'component/button.php'; 
-                        $label = 'Approve'; $type = 'success'; $size = 'xs'; $icon = 'mdi:check-decagram'; $attr = 'id="approveBtn" onclick="approvePayroll()" disabled';
-                        include 'component/button.php'; 
+                        if (hasAnyPermissionSlugs(['payroll.manage'])) {
+                            $label = 'Run Payroll'; $type = 'primary'; $size = 'xs'; $icon = 'mdi:play-circle-outline'; $attr = 'onclick="openGenerateModal()"';
+                            include 'component/button.php';
+                            $label = 'Approve'; $type = 'success'; $size = 'xs'; $icon = 'mdi:check-decagram'; $attr = 'id="approveBtn" onclick="approvePayroll()" disabled';
+                            include 'component/button.php';
+                        }
                     ?>
                 </div>
             <?php 
@@ -86,8 +88,10 @@
                 </div>
                 <div class="flex gap-2">
                     <?php 
-                        $label = 'Salary Settings'; $type = 'secondary'; $size = 'sm'; $icon = 'mdi:cog-outline'; $attr = 'onclick="openConfigModal()"';
-                        include 'component/button.php';
+                        if (hasAnyPermissionSlugs(['payroll.manage'])) {
+                            $label = 'Salary Settings'; $type = 'secondary'; $size = 'sm'; $icon = 'mdi:cog-outline'; $attr = 'onclick="openConfigModal()"';
+                            include 'component/button.php';
+                        }
                     ?>
                 </div>
             </div>

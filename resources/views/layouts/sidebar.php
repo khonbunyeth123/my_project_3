@@ -14,15 +14,17 @@
         $current_page = $_GET['page'] ?? 'dashboard';
         
         $menu_items = [
-          ['page'=>'dashboard','label'=>'Dashboard','icon'=>'mdi:view-dashboard-outline'],
-          ['page'=>'attendance','label'=>'Attendance','icon'=>'mdi:clock-check-outline'],
-          ['page'=>'employee','label'=>'Employees','icon'=>'mdi:account-group-outline'],
-          ['page'=>'leave','label'=>'Leave','icon'=>'mdi:calendar-month-outline'],
-          ['page'=>'calendar','label'=>'Calendar','icon'=>'mdi:calendar-range-outline'],
+          ['page'=>'dashboard','label'=>'Dashboard','icon'=>'mdi:view-dashboard-outline','permissions'=>['dashboard.view']],
+          ['page'=>'attendance','label'=>'Attendance','icon'=>'mdi:clock-check-outline','permissions'=>['attendance.view']],
+          ['page'=>'employee','label'=>'Employees','icon'=>'mdi:account-group-outline','permissions'=>['employee.view','employees.view']],
+          ['page'=>'departments','label'=>'Departments','icon'=>'mdi:office-building-outline','permissions'=>['department.view','departments.view','roles.manage']],
+          ['page'=>'leave','label'=>'Leave','icon'=>'mdi:calendar-month-outline','permissions'=>['leave.view']],
+          ['page'=>'calendar','label'=>'Calendar','icon'=>'mdi:calendar-range-outline','permissions'=>['calendar.view','calendar.manage']],
           // ['page'=>'payroll','label'=>'Payroll','icon'=>'mdi:cash-register'],
         ];
 
         foreach ($menu_items as $item):
+          if (!$canAccessSlugs($item['permissions'])) continue;
           $is_active = $current_page === $item['page'];
         ?>
         <li>
@@ -67,6 +69,13 @@
               ['page' => 'report/report_top_employee', 'label' => 'Top'],
             ];
             foreach ($report_items as $sub):
+              $reportPermission = match ($sub['page']) {
+                'report/report_daily' => ['report.view_daily', 'report.view'],
+                'report/report_summary' => ['report.view_summary', 'report.view'],
+                'report/report_detail' => ['report.view_detail', 'report.view'],
+                default => ['report.view_top', 'report.view'],
+              };
+              if (!$canAccessSlugs($reportPermission)) continue;
               $is_sub_active = $current_page === $sub['page'];
             ?>
             <li>
@@ -91,12 +100,13 @@
       <ul class="space-y-0.5">
         <?php
         $system_items = [
-          ['page'=>'user','label'=>'Users','icon'=>'mdi:account-cog-outline'],
-          ['page'=>'roles','label'=>'Roles','icon'=>'mdi:shield-account-outline'],
-          ['page'=>'departments','label'=>'Departments','icon'=>'mdi:office-building-outline'],
-          ['page'=>'permissions','label'=>'Permissions','icon'=>'mdi:key-outline'],
+          ['page'=>'user','label'=>'Users','icon'=>'mdi:account-cog-outline','permissions'=>['user.view','users.view']],
+          ['page'=>'roles','label'=>'Roles','icon'=>'mdi:shield-account-outline','permissions'=>['role.view','roles.view']],
+          
+          ['page'=>'permissions','label'=>'Permissions','icon'=>'mdi:key-outline','permissions'=>['permission.view','permissions.view']],
         ];
         foreach ($system_items as $item):
+          if (!$canAccessSlugs($item['permissions'])) continue;
           $is_active = $current_page === $item['page'];
         ?>
         <li>
